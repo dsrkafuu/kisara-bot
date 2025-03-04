@@ -1,0 +1,3 @@
+[submodule "NapCatQQ"]
+	path = NapCatQQ
+	url = git@github.com:NapNeko/NapCatQQ.git

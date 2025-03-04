@@ -1,0 +1,21 @@
+{
+  "extends": "@dsrca/config/tsconfig.json",
+  "compilerOptions": {
+    "lib": ["ESNext", "DOM"],
+    "target": "ESNext",
+    "module": "ESNext",
+    "allowJs": true,
+    "moduleResolution": "bundler",
+    "noEmit": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "baseUrl": ".",
+    "resolveJsonModule": true,
+    "paths": {
+      "@config/*": ["./config/*"],
+      "@app/*": ["./app/*"],
+      "@hzys/*": ["./hzys/*"],
+      "@napcat/*": ["./NapCatQQ/src/*"]
+    }
+  }
+}
