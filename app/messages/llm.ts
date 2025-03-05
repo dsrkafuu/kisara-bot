@@ -46,6 +46,23 @@ const appendResponded = (messageSet: Set<string>, messageIds: string[]) => {
   }
 };
 
+/** 获取文本形式的消息记录 */
+const getMessageLog = (dbLineObj: OB11Message, botQQId?: number) => {
+  const simpleText = getSimpleText(dbLineObj, { at: true });
+  if (simpleText) {
+    const timeStr = dayjs(dbLineObj.time * 1000).format('M月D日H时m分');
+    let senderStr = dbLineObj.sender.nickname;
+    if (`${dbLineObj.sender.user_id}` === `${botQQId}`) {
+      senderStr = '你';
+    }
+    const messageLog = `[${timeStr}]“${senderStr}”说：“${simpleText.replaceAll(`@${botQQId}`, '@你')}”`;
+    return {
+      messageLog,
+      messageId: `${dbLineObj.user_id}_${dbLineObj.message_id}`,
+    };
+  }
+};
+
 /**
  * LLM 网友中间件
  */
@@ -98,29 +115,16 @@ const middleware: OnionMiddleware<OB11Message> = async (data, ctx, next) => {
             logger.error('llm', 'parse db line error', e);
             continue;
           }
-
           // 排除掉被其他插件处理过的消息
           const swap = dbLineObj.swap || {};
           if (Object.keys(swap).length > 0 && !swap.llm) {
             continue;
           }
-
           // 构造聊天记录内容
           if (dbLineObj) {
-            const simpleText = getSimpleText(dbLineObj, { at: true });
-            if (simpleText) {
-              const timeStr = dayjs(dbLineObj.time * 1000).format(
-                'M月D日H时m分'
-              );
-              let senderStr = dbLineObj.sender.nickname;
-              if (`${dbLineObj.sender.user_id}` === `${botQQId}`) {
-                senderStr = '你';
-              }
-              const messageLog = `[${timeStr}]“${senderStr}”说：“${simpleText.replaceAll(`@${botQQId}`, '@你')}”`;
-              recordLines.push({
-                messageLog,
-                messageId: `${dbLineObj.user_id}_${dbLineObj.message_id}`,
-              });
+            const messageEntry = getMessageLog(dbLineObj, botQQId);
+            if (messageEntry) {
+              recordLines.push(messageEntry);
             }
           }
         }
@@ -187,10 +191,27 @@ const middleware: OnionMiddleware<OB11Message> = async (data, ctx, next) => {
           }
         }
 
-        if (notRespondedLines.length > 5) {
+        // 至少有 5 条未回复的消息记录，除非是直接 at 机器人
+        if (notRespondedLines.length > 5 || isAtBot) {
+          // 已经回复过的消息记录
           let userPrompt = `这是之前的群聊消息记录：${alreadyRespondedLines.join('。')}。`;
+          // 未回复的消息记录
           if (notRespondedLines.length > 0) {
             userPrompt += `这是你未回复的消息记录：${notRespondedLines.map((line) => line.messageLog).join('。')}。`;
+            // 如果是自动触发，在未回复里面加上当前这条
+            if (!isAtBot) {
+              const thisMessageEntry = getMessageLog(data, botQQId);
+              if (thisMessageEntry) {
+                userPrompt += `${thisMessageEntry.messageLog}。`;
+              }
+            }
+          }
+          // 如果是 at 机器人，前面的未回复的消息记录也就没有当前这条，让他重点回复当前这条
+          if (isAtBot) {
+            const thisMessageEntry = getMessageLog(data, botQQId);
+            if (thisMessageEntry) {
+              userPrompt += `这是这次群友指定要你回复的记录：${thisMessageEntry.messageLog}。`;
+            }
           }
           userPrompt += `消息记录格式为“群友昵称/你”说：“”。`;
           userPrompt += `你要作为${Name}对未回复的群聊消息记录做出符合${Name}角色设定的回复。`;

@@ -102,7 +102,6 @@ export const sendMessage = async (
       },
     });
     if (appConfig.respond) {
-      console.log(111, jsonData);
       ctx.ws.send(jsonData);
     } else {
       logger.debug('respond', 'mock group message', jsonData);
