@@ -240,21 +240,10 @@ const middleware: OnionMiddleware<OB11Message> = async (data, ctx, next) => {
               `respond think:\n${think?.trim() || ''}\nrespond content:\n${resArr.join('\n')}`
             );
 
-            // 如果超过两句，则每 X 句合并成两句
-            const resLength = resArr.length;
-            if (resLength > 2) {
-              const xToOne = Math.ceil(resLength / 2);
-              const newResArr: string[] = [];
-              let lineIndex = 0;
-              while (lineIndex < resLength) {
-                newResArr.push(
-                  resArr.slice(lineIndex, lineIndex + xToOne).join(' ')
-                );
-                lineIndex += xToOne;
-              }
-              resArr = newResArr;
+            // 如果超过两句，只取最后两句
+            if (resArr.length > 2) {
+              resArr = resArr.slice(resArr.length - 2);
             }
-
             // 发送回复
             await ctx.send([getText(resArr[0])]);
             if (resArr[1]) {
