@@ -8,7 +8,6 @@ import { getRecord, getText } from '@app/respond';
  * 活字印刷能力中间件
  */
 const middleware: OnionMiddleware<OB11Message> = async (data, ctx, next) => {
-  const { user_id } = data;
   const fullSimpleText = getSimpleText(data);
   const sourceTextSplits = fullSimpleText.split('活字印刷');
   if (sourceTextSplits.length > 1) {
@@ -18,7 +17,11 @@ const middleware: OnionMiddleware<OB11Message> = async (data, ctx, next) => {
       .trim();
 
     // 单人 QQ 号限流，群组请求者 QQ 限流
-    const rateLimiter = getRateLimiter(`hzys_${user_id}`, 10);
+    let limitKey = `hzys_private_${data.user_id}`;
+    if (data.message_type === 'group') {
+      limitKey = `hzys_group_${data.user_id}`;
+    }
+    const rateLimiter = getRateLimiter(limitKey, 10);
     if (inputText) {
       try {
         if (rateLimiter.check()) {

@@ -17,7 +17,7 @@ const middleware: OnionMiddleware<OB11Message> = async (data, ctx, next) => {
   const trSourceTextSplits = fullSimpleText.split('帮我翻译');
 
   const clearifyText = (text?: string | null) => {
-    return text?.trim().replace(/\n{2,}/g, '\n') || '';
+    return text?.trim().replace(/\n{3,}/g, '\n\n') || '';
   };
 
   if (qaSourceTextSplits.length > 1) {
@@ -26,7 +26,11 @@ const middleware: OnionMiddleware<OB11Message> = async (data, ctx, next) => {
       .join(' ')
       .trim();
     // 单人 QQ 号限流，群组请求者 QQ 限流
-    const rateLimiter = getRateLimiter(`prompt_qa_${user_id}`, 10);
+    let limitKey = `prompt_qa_private_${user_id}`;
+    if (data.message_type === 'group') {
+      limitKey = `prompt_qa_group_${user_id}`;
+    }
+    const rateLimiter = getRateLimiter(limitKey, 10);
     if (inputText) {
       try {
         if (rateLimiter.check()) {
@@ -53,7 +57,11 @@ const middleware: OnionMiddleware<OB11Message> = async (data, ctx, next) => {
       .join(' ')
       .trim();
     // 单人 QQ 号限流，群组请求者 QQ 限流
-    const rateLimiter = getRateLimiter(`prompt_rp_${user_id}`, 10);
+    let limitKey = `prompt_rp_private_${user_id}`;
+    if (data.message_type === 'group') {
+      limitKey = `prompt_rp_group_${user_id}`;
+    }
+    const rateLimiter = getRateLimiter(limitKey, 10);
     if (inputText) {
       try {
         if (rateLimiter.check()) {
@@ -80,7 +88,11 @@ const middleware: OnionMiddleware<OB11Message> = async (data, ctx, next) => {
       .join(' ')
       .trim();
     // 单人 QQ 号限流，群组请求者 QQ 限流
-    const rateLimiter = getRateLimiter(`prompt_tr_${user_id}`, 10);
+    let limitKey = `prompt_tr_private_${user_id}`;
+    if (data.message_type === 'group') {
+      limitKey = `prompt_tr_group_${user_id}`;
+    }
+    const rateLimiter = getRateLimiter(limitKey, 10);
     if (inputText) {
       try {
         if (rateLimiter.check()) {

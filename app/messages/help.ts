@@ -12,7 +12,11 @@ const middleware: OnionMiddleware<OB11Message> = async (data, ctx, next) => {
   const sourceTextSplits = fullSimpleText.split('帮助');
   if (sourceTextSplits.length > 1) {
     // 单人 QQ 号限流，群组请求者 QQ 限流
-    const rateLimiter = getRateLimiter(`help_${data.user_id}`, 300);
+    let limitKey = `help_private_${data.user_id}`;
+    if (data.message_type === 'group') {
+      limitKey = `help_group_${data.user_id}`;
+    }
+    const rateLimiter = getRateLimiter(limitKey, 300);
     if (rateLimiter.check()) {
       // 回复帮助信息
       let helpText = helpConfig.desc;

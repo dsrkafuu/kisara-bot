@@ -104,13 +104,13 @@ const middleware: OnionMiddleware<OB11Message> = async (data, ctx, next) => {
       if (recordLines.length >= 5) {
         // 单人 QQ 号限流 10 秒，群组群号限流 120 秒，at 机器人限制 10 秒
         let limitTime = 10;
-        let limitKey = `llm_auto_${user_id}`;
+        let limitKey = `llm_auto_private_${user_id}`;
         if (message_type === 'group') {
-          limitKey = `llm_auto_${group_id}`;
+          limitKey = `llm_auto_group_${group_id}`;
           limitTime = 120;
         }
         if (isAtBot) {
-          limitKey = `llm_at_${group_id}`;
+          limitKey = `llm_at_group_${group_id}`;
           limitTime = 10;
         }
         const rateLimiter = getRateLimiter(limitKey, limitTime);
@@ -179,29 +179,22 @@ const middleware: OnionMiddleware<OB11Message> = async (data, ctx, next) => {
 
           logger.info(
             'llm',
-            'request',
+            'request\n',
             `${systemLines.join('')}\n${userPrompt}`
           );
           const res = await requestLLM(systemLines.join(''), userPrompt);
           if (res) {
-            logger.info('llm', 'respond', `${res}`.trim());
+            logger.info('llm', 'respond\n', `${res}`.trim());
             let resArr = res.split('\n').filter((item) => !!item.trim());
-            // 最多回复三句
-            if (resArr.length > 3) {
-              resArr = resArr.slice(resArr.length - 3);
+            // 最多回复两句
+            if (resArr.length > 2) {
+              resArr = resArr.slice(resArr.length - 2);
             }
-            ctx.send([getText(resArr[0])]);
+            await ctx.send([getText(resArr[0])]);
             if (resArr[1]) {
               const p1Wait = resArr[1].length * 250;
-              setTimeout(() => {
-                ctx.send([getText(resArr[1])]);
-              }, p1Wait);
-              if (resArr[2]) {
-                const p2Wait = p1Wait + resArr[2].length * 250;
-                setTimeout(() => {
-                  ctx.send([getText(resArr[2])]);
-                }, p2Wait);
-              }
+              await new Promise((resolve) => setTimeout(resolve, p1Wait));
+              await ctx.send([getText(resArr[1])]);
             }
           }
         }
