@@ -1,8 +1,10 @@
+import dayjs from 'dayjs';
 import { OB11Message } from '@napcat/onebot';
 import helpConfig from '@config/help.json';
 import { getText } from '@app/respond';
 import { OnionMiddleware } from '@app/types';
 import { getRateLimiter, getSimpleText } from '@app/utils';
+import { getRecordUsage } from '@app/usage';
 
 /**
  * 活字印刷能力中间件
@@ -31,10 +33,28 @@ const middleware: OnionMiddleware<OB11Message> = async (data, ctx, next) => {
       }
       helpText += `\n${processData}`;
 
-      helpText += '\n以下为固定指令模式示例：';
+      helpText += '\n\n以下为固定指令模式示例：';
       helpConfig.features.forEach((feature) => {
         helpText += `\n${feature}`;
       });
+
+      helpText += '\n\nLLM 使用量 (次数|合计|请求|生成|思考)：';
+      const y = await getRecordUsage(
+        dayjs(data.time * 1000)
+          .subtract(1, 'day')
+          .valueOf()
+      );
+      if (!y || !y.times) {
+        helpText += '\n昨日 (未使用或统计失败)';
+      } else {
+        helpText += `\n昨日 (${y.times}|${Math.round(y.total_tokens)}|${Math.round(y.prompt_tokens)}|${Math.round(y.completion_tokens)}|${Math.round(y.reasoning_tokens)})`;
+      }
+      const t = await getRecordUsage(data.time * 1000);
+      if (!t || !t.times) {
+        helpText += '\n今日 (未使用或统计失败)';
+      } else {
+        helpText += `\n今日 (${t.times}|${Math.round(t.total_tokens)}|${Math.round(t.prompt_tokens)}|${Math.round(t.completion_tokens)}|${Math.round(t.reasoning_tokens)})`;
+      }
 
       await ctx.send([getText(helpText)]);
     }

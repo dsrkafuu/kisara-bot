@@ -12,7 +12,7 @@ import { DB_DIR } from '@app/constants';
 
 /** 获取未回复的消息 ID 列表 */
 const getResponded = (): Set<string> => {
-  const filePath = path.resolve(DB_DIR, 'llm-responded.json');
+  const filePath = path.resolve(DB_DIR, 'llm_responded.json');
   if (!fse.existsSync(filePath)) {
     return new Set<string>();
   }
@@ -39,7 +39,7 @@ const appendResponded = (messageSet: Set<string>, messageIds: string[]) => {
     }
   }
   try {
-    const filePath = path.resolve(DB_DIR, 'llm-responded.json');
+    const filePath = path.resolve(DB_DIR, 'llm_responded.json');
     fse.writeJSONSync(filePath, Array.from(messageSet));
   } catch (e: any) {
     logger.error('llm', 'append responded error', e);
@@ -190,6 +190,7 @@ const middleware: OnionMiddleware<OB11Message> = async (data, ctx, next) => {
             notRespondedLines.push(recordLine);
           }
         }
+        const thisMessageEntry = getMessageLog(data, botQQId);
 
         // 至少有 5 条未回复的消息记录，除非是直接 at 机器人
         if (notRespondedLines.length > 5 || isAtBot) {
@@ -199,19 +200,13 @@ const middleware: OnionMiddleware<OB11Message> = async (data, ctx, next) => {
           if (notRespondedLines.length > 0) {
             userPrompt += `这是你未回复的消息记录：${notRespondedLines.map((line) => line.messageLog).join('。')}。`;
             // 如果是自动触发，在未回复里面加上当前这条
-            if (!isAtBot) {
-              const thisMessageEntry = getMessageLog(data, botQQId);
-              if (thisMessageEntry) {
-                userPrompt += `${thisMessageEntry.messageLog}。`;
-              }
+            if (!isAtBot && thisMessageEntry) {
+              userPrompt += `${thisMessageEntry.messageLog}。`;
             }
           }
           // 如果是 at 机器人，前面的未回复的消息记录也就没有当前这条，让他重点回复当前这条
-          if (isAtBot) {
-            const thisMessageEntry = getMessageLog(data, botQQId);
-            if (thisMessageEntry) {
-              userPrompt += `这是这次群友指定要你回复的记录：${thisMessageEntry.messageLog}。`;
-            }
+          if (isAtBot && thisMessageEntry) {
+            userPrompt += `这是这次群友指定要你回复的记录：${thisMessageEntry.messageLog}。`;
           }
           userPrompt += `消息记录格式为“群友昵称/你”说：“”。`;
           userPrompt += `你要作为${Name}对未回复的群聊消息记录做出符合${Name}角色设定的回复。`;
@@ -219,11 +214,14 @@ const middleware: OnionMiddleware<OB11Message> = async (data, ctx, next) => {
           userPrompt += `不要称呼群友昵称，使用你或你们代指群友。`;
           userPrompt += `只提供${Name}的回复内容，回复不需要解释思路、不需要消息记录格式。`;
 
-          // 记录已回复
-          appendResponded(
-            respondedMessages,
-            notRespondedLines.map((line) => line.messageId)
-          );
+          // 记录已回复，记得加上当前这条
+          const toRecord = notRespondedLines.map((line) => line.messageId);
+          if (thisMessageEntry) {
+            toRecord.push(thisMessageEntry.messageId);
+          }
+          appendResponded(respondedMessages, toRecord);
+
+          // 请求 LLM
           logger.info(
             'llm',
             `request system prompt:\n${systemLines.join('')}\nrequest user prompt:\n${userPrompt}`

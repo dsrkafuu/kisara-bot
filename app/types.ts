@@ -52,3 +52,13 @@ export interface RespondEchoData {
   data: Record<string, any>;
   message?: string;
 }
+
+/** 使用量统计 */
+export interface RecordUsage {
+  day: string;
+  times: number;
+  completion_tokens: number;
+  prompt_tokens: number;
+  total_tokens: number;
+  reasoning_tokens: number;
+}

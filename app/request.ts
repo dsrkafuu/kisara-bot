@@ -1,5 +1,6 @@
 import OpenAI from 'openai';
 import llmConfig from '@config/llm.json';
+import { recordUsage } from './usage';
 
 const openai = new OpenAI({
   baseURL: llmConfig.baseURL,
@@ -23,6 +24,7 @@ export const requestLLM = async (
     ],
   });
   const message: any = completion.choices[0]?.message;
+  await recordUsage(completion.usage);
   return {
     content: message?.content,
     think: message?.reasoning_content,
