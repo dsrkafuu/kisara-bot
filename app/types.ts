@@ -1,15 +1,21 @@
 import { WebSocket } from 'ws';
-import { OB11MessageData } from '@napcat/onebot';
+import { OB11Message, OB11MessageData } from '@napcat/onebot';
 
-/**
- * Bot 上下文
- */
+/** Bot 上下文 */
 export interface BotContext {
+  /** NapCat 状态 */
   status: boolean;
+  /** NapCat 客户端连接 */
   ws: WebSocket;
+  /** NapCat 客户端连接和状态 */
   clients: Map<WebSocket, boolean>;
   /** 插件标记数据 */
   swap: Record<string, any>;
+  /** 通知 db 当次完成后写入的消息 */
+  db: {
+    records: OB11Message[];
+  };
+  /** 发送 QQ 消息 */
   send: (message: OB11MessageData[], options?: RespondOptions) => Promise<void>;
 }
 
@@ -43,5 +49,6 @@ export interface RespondEcho {
 export interface RespondEchoData {
   echo: string;
   status: string;
+  data: Record<string, any>;
   message?: string;
 }

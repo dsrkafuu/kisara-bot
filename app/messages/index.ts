@@ -1,5 +1,5 @@
-import logger from '@app/logger';
 import { OB11Message } from '@napcat/onebot';
+import logger from '@app/logger';
 import OnionCenter from '@app/onion';
 import { BotContext } from '@app/types';
 import db from './db';

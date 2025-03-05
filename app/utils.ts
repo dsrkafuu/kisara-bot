@@ -36,7 +36,7 @@ export const getRateLimiter = (key: string, limit: number) => {
  * 获取合并后的所有纯文本消息
  */
 export const getSimpleText = (
-  data: OB11Message,
+  data: Partial<OB11Message>,
   options?: { at?: boolean }
 ) => {
   const textMessages: OB11MessageData[] = [];
@@ -45,7 +45,7 @@ export const getSimpleText = (
       type: OB11MessageDataType.text,
       data: { text: data.message },
     });
-  } else {
+  } else if (data.message) {
     if (options?.at) {
       textMessages.push(
         ...data.message.filter(
@@ -74,4 +74,8 @@ export const getSimpleText = (
     .filter((text) => !!text)
     .join(' ');
   return fullSimpleText;
+};
+
+export const clearifyText = (text?: string | null) => {
+  return text?.replace(/\n+/g, '\n').trim() || '';
 };

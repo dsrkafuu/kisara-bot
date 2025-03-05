@@ -43,6 +43,7 @@ wss.on('connection', (ws) => {
         ws,
         clients,
         swap: {},
+        db: { records: [] },
         send: (...args) => sendMessage(data, ctx, ...args),
       };
       if (data.post_type) {

@@ -6,7 +6,15 @@ const openai = new OpenAI({
   apiKey: llmConfig.apiKey,
 });
 
-export const requestLLM = async (system: string, prompt: string) => {
+interface LLMResult {
+  content?: string | null;
+  think?: string | null;
+}
+
+export const requestLLM = async (
+  system: string,
+  prompt: string
+): Promise<LLMResult> => {
   const completion = await openai.chat.completions.create({
     model: llmConfig.model,
     messages: [
@@ -14,5 +22,9 @@ export const requestLLM = async (system: string, prompt: string) => {
       { role: 'user', content: prompt },
     ],
   });
-  return completion.choices[0]?.message?.content;
+  const message: any = completion.choices[0]?.message;
+  return {
+    content: message?.content,
+    think: message?.reasoning_content,
+  };
 };

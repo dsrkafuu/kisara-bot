@@ -2,6 +2,7 @@ import { OB11BaseMetaEvent } from '@napcat/onebot/event/meta/OB11BaseMetaEvent';
 import { OB11LifeCycleEvent } from '@napcat/onebot/event/meta/OB11LifeCycleEvent';
 import { OnionMiddleware } from '@app/types';
 import logger from '@app/logger';
+import { getLoginInfo } from '@app/respond';
 
 /**
  * 生命周期中间件
@@ -20,6 +21,9 @@ const middleware: OnionMiddleware<OB11BaseMetaEvent> = async (
     logger.info('lifecycle', 'napcat connected');
     ctx.clients.set(ctx.ws, true);
   }
+
+  // 初始化 Bot QQ 信息
+  await getLoginInfo(ctx);
 
   await next();
 };

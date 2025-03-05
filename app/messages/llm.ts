@@ -1,19 +1,50 @@
-import dayjs from 'dayjs';
-import fse from 'fs-extra';
 import path from 'path';
+import fse from 'fs-extra';
+import dayjs from 'dayjs';
 import { OB11Message } from '@napcat/onebot';
 import llmConfig from '@config/llm.json';
-import appConfig from '@config/app.json';
-import { OnionMiddleware } from '@app/types';
 import logger from '@app/logger';
-import { getRateLimiter, getSimpleText } from '@app/utils';
 import { requestLLM } from '@app/request';
 import { getText } from '@app/respond';
+import { OnionMiddleware } from '@app/types';
+import { getRateLimiter, getSimpleText } from '@app/utils';
+import { DB_DIR } from '@app/constants';
 
-const DB_DIR = path.resolve(process.cwd(), appConfig.db.dbDir);
-fse.ensureDirSync(DB_DIR);
+/** 获取未回复的消息 ID 列表 */
+const getResponded = (): Set<string> => {
+  const filePath = path.resolve(DB_DIR, 'llm-responded.json');
+  if (!fse.existsSync(filePath)) {
+    return new Set<string>();
+  }
+  try {
+    return new Set<string>(fse.readJSONSync(filePath) || []);
+  } catch (e: any) {
+    logger.error('llm', 'get responded error', e);
+    return new Set<string>();
+  }
+};
 
-const respondedMessages = new Set<string>();
+/** 添加已回复的消息 */
+const appendResponded = (messageSet: Set<string>, messageIds: string[]) => {
+  messageIds.forEach((messageId) => {
+    messageSet.add(messageId);
+  });
+  // 清空前 500 条已回复的消息记录
+  if (messageSet.size >= 1000) {
+    let deleteCount = 0;
+    for (const messageId of messageSet) {
+      messageSet.delete(messageId);
+      deleteCount++;
+      if (deleteCount >= 500) break;
+    }
+  }
+  try {
+    const filePath = path.resolve(DB_DIR, 'llm-responded.json');
+    fse.writeJSONSync(filePath, Array.from(messageSet));
+  } catch (e: any) {
+    logger.error('llm', 'append responded error', e);
+  }
+};
 
 /**
  * LLM 网友中间件
@@ -70,7 +101,7 @@ const middleware: OnionMiddleware<OB11Message> = async (data, ctx, next) => {
 
           // 排除掉被其他插件处理过的消息
           const swap = dbLineObj.swap || {};
-          if (Object.keys(swap).length > 0) {
+          if (Object.keys(swap).length > 0 && !swap.llm) {
             continue;
           }
 
@@ -101,60 +132,62 @@ const middleware: OnionMiddleware<OB11Message> = async (data, ctx, next) => {
       }
 
       // 记录至少 5 条
-      if (recordLines.length >= 5) {
-        // 单人 QQ 号限流 10 秒，群组群号限流 120 秒，at 机器人限制 10 秒
-        let limitTime = 10;
-        let limitKey = `llm_auto_private_${user_id}`;
-        if (message_type === 'group') {
-          limitKey = `llm_auto_group_${group_id}`;
-          limitTime = 120;
-        }
-        if (isAtBot) {
-          limitKey = `llm_at_group_${group_id}`;
-          limitTime = 10;
-        }
-        const rateLimiter = getRateLimiter(limitKey, limitTime);
+      // 单人 QQ 号限流 10 秒，群组群号限流 120 秒，at 机器人限制 10 秒
+      let limitTime = 10;
+      let limitKey = `llm_auto_private_${user_id}`;
+      if (message_type === 'group') {
+        limitKey = `llm_auto_group_${group_id}`;
+        limitTime = 120;
+      }
+      if (isAtBot) {
+        limitKey = `llm_at_group_${group_id}`;
+        limitTime = 10;
+      }
+      const rateLimiter = getRateLimiter(limitKey, limitTime);
 
-        if (rateLimiter.check()) {
-          // 请求 LLM
-          const systemLines = [];
-          const { Name, Language, Profile, Skills, Background, Rules } =
-            llmConfig.role;
-          if (Profile) {
-            systemLines.push(
-              `('Profile', ['你是${Name}', ${Profile.map((item) => `'${item}'`).join(', ')}])`
-            );
-          }
-          if (Skills) {
-            systemLines.push(
-              `('Skills', [${Skills.map((item) => `'${item}'`).join(', ')}])`
-            );
-          }
-          if (Background) {
-            systemLines.push(
-              `('Background', [${Background.map((item) => `'${item}'`).join(', ')}])`
-            );
-          }
-          if (Rules) {
-            systemLines.push(
-              `('Rules', [${Rules.map((item) => `'你必须遵守${item}'`).join(', ')}, '你必须用${Language}与我交谈'])`
-            );
-          }
+      if (rateLimiter.check()) {
+        // 请求 LLM
+        const systemLines = [];
+        const { Name, Language, Profile, Skills, Background, Rules } =
+          llmConfig.role;
+        if (Profile) {
+          systemLines.push(
+            `('Profile', ['你是${Name}', ${Profile.map((item) => `'${item}'`).join(', ')}])`
+          );
+        }
+        if (Skills) {
+          systemLines.push(
+            `('Skills', [${Skills.map((item) => `'${item}'`).join(', ')}])`
+          );
+        }
+        if (Background) {
+          systemLines.push(
+            `('Background', [${Background.map((item) => `'${item}'`).join(', ')}])`
+          );
+        }
+        if (Rules) {
+          systemLines.push(
+            `('Rules', [${Rules.map((item) => `'你必须遵守${item}'`).join(', ')}, '你必须用${Language}与我交谈'])`
+          );
+        }
 
-          // 过滤已回复的消息记录
-          const notRespondedLines: Array<{
-            messageLog: string;
-            messageId: string;
-          }> = [];
-          const alreadyRespondedLines: string[] = [];
-          for (let i = recordLines.length - 1; i >= 0; i--) {
-            const recordLine = recordLines[i];
-            if (respondedMessages.has(recordLine.messageId)) {
-              alreadyRespondedLines.push(recordLine.messageLog);
-            } else {
-              notRespondedLines.push(recordLine);
-            }
+        // 过滤已回复的消息记录
+        const notRespondedLines: Array<{
+          messageLog: string;
+          messageId: string;
+        }> = [];
+        const alreadyRespondedLines: string[] = [];
+        const respondedMessages = getResponded();
+        for (let i = recordLines.length - 1; i >= 0; i--) {
+          const recordLine = recordLines[i];
+          if (respondedMessages.has(recordLine.messageId)) {
+            alreadyRespondedLines.push(recordLine.messageLog);
+          } else {
+            notRespondedLines.push(recordLine);
           }
+        }
+
+        if (notRespondedLines.length > 5) {
           let userPrompt = `这是之前的群聊消息记录：${alreadyRespondedLines.join('。')}。`;
           if (notRespondedLines.length > 0) {
             userPrompt += `这是你未回复的消息记录：${notRespondedLines.map((line) => line.messageLog).join('。')}。`;
@@ -164,45 +197,65 @@ const middleware: OnionMiddleware<OB11Message> = async (data, ctx, next) => {
           userPrompt += `确保回复充分体现${Name}的性格特征和情感反应。`;
           userPrompt += `不要称呼群友昵称，使用你或你们代指群友。`;
           userPrompt += `只提供${Name}的回复内容，回复不需要解释思路、不需要消息记录格式。`;
-          notRespondedLines.forEach((line) => {
-            respondedMessages.add(line.messageId);
-          });
-          // 清空 500 条已回复的消息记录
-          if (respondedMessages.size >= 1000) {
-            let deleteCount = 0;
-            for (const messageId of respondedMessages) {
-              respondedMessages.delete(messageId);
-              deleteCount++;
-              if (deleteCount >= 500) break;
-            }
-          }
 
+          // 记录已回复
+          appendResponded(
+            respondedMessages,
+            notRespondedLines.map((line) => line.messageId)
+          );
           logger.info(
             'llm',
-            'request\n',
-            `${systemLines.join('')}\n${userPrompt}`
+            `request system prompt:\n${systemLines.join('')}\nrequest user prompt:\n${userPrompt}`
           );
-          const res = await requestLLM(systemLines.join(''), userPrompt);
-          if (res) {
-            logger.info('llm', 'respond\n', `${res}`.trim());
-            let resArr = res.split('\n').filter((item) => !!item.trim());
-            // 最多回复两句
-            if (resArr.length > 2) {
-              resArr = resArr.slice(resArr.length - 2);
+          const { content, think } = await requestLLM(
+            systemLines.join(''),
+            userPrompt
+          );
+          if (content) {
+            let resArr = content
+              .split('\n')
+              .map((line) => line.trim())
+              .filter((line) => !!line);
+            logger.info(
+              'llm',
+              `respond think:\n${think?.trim() || ''}\nrespond content:\n${resArr.join('\n')}`
+            );
+
+            // 如果超过两句，则每 X 句合并成两句
+            const resLength = resArr.length;
+            if (resLength > 2) {
+              const xToOne = Math.ceil(resLength / 2);
+              const newResArr: string[] = [];
+              let lineIndex = 0;
+              while (lineIndex < resLength) {
+                newResArr.push(
+                  resArr.slice(lineIndex, lineIndex + xToOne).join(' ')
+                );
+                lineIndex += xToOne;
+              }
+              resArr = newResArr;
             }
+
+            // 发送回复
             await ctx.send([getText(resArr[0])]);
             if (resArr[1]) {
-              const p1Wait = resArr[1].length * 250;
+              // 一个字等待 500 毫秒
+              const p1Wait = resArr[1].length * 500;
               await new Promise((resolve) => setTimeout(resolve, p1Wait));
               await ctx.send([getText(resArr[1])]);
             }
           }
         }
 
-        // 不需要其他插件了
-        ctx.swap.llm = true;
-        return;
+        // 未回复记录小于五条
+        else {
+          logger.info('llm', 'not enough unread:', notRespondedLines.length);
+        }
       }
+
+      // 不需要其他插件了
+      ctx.swap.llm = true;
+      return;
     }
   }
 

@@ -1,8 +1,8 @@
 import { OB11Message } from '@napcat/onebot';
-import { OnionMiddleware } from '@app/types';
-import { getRateLimiter, getSimpleText } from '@app/utils';
 import helpConfig from '@config/help.json';
 import { getText } from '@app/respond';
+import { OnionMiddleware } from '@app/types';
+import { getRateLimiter, getSimpleText } from '@app/utils';
 
 /**
  * 活字印刷能力中间件
@@ -10,7 +10,9 @@ import { getText } from '@app/respond';
 const middleware: OnionMiddleware<OB11Message> = async (data, ctx, next) => {
   const fullSimpleText = getSimpleText(data);
   const sourceTextSplits = fullSimpleText.split('帮助');
-  if (sourceTextSplits.length > 1) {
+
+  // 有关键词帮助，并且字数小于 10
+  if (sourceTextSplits.length > 1 && fullSimpleText.length < 10) {
     // 单人 QQ 号限流，群组请求者 QQ 限流
     let limitKey = `help_private_${data.user_id}`;
     if (data.message_type === 'group') {
