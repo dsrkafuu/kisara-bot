@@ -17,7 +17,7 @@ const middleware: OnionMiddleware<OB11Message> = async (data, ctx, next) => {
     if (data.message_type === 'group') {
       limitKey = `help_group_${data.user_id}`;
     }
-    const rateLimiter = getRateLimiter(limitKey, 300);
+    const rateLimiter = getRateLimiter(limitKey, 10);
     if (rateLimiter.check()) {
       // 回复帮助信息
       let helpText = helpConfig.desc;

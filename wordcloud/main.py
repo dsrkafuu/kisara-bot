@@ -6,8 +6,8 @@ from wordcloud import WordCloud, STOPWORDS
 
 
 def clean_files(out_folder: Path):
-    """文件清理"""
-    cutoff = time.time() - 3600
+    # 清理 3 天的过期文件
+    cutoff = time.time() - 3600 * 24 * 3
     clean_count = 0
     for file in out_folder.glob("*"):
         if file.is_file() and file.stat().st_birthtime < cutoff:
@@ -18,7 +18,7 @@ def clean_files(out_folder: Path):
 
 def main():
     try:
-        id = sys.argv[1]
+        file_path = sys.argv[1]
         param = sys.argv[2]
         print(id, param)
         file_dir = Path(__file__).resolve().parent
@@ -28,7 +28,7 @@ def main():
         out_dir = file_dir / "out"
         if not out_dir.exists():
             out_dir.mkdir()
-        out_file = out_dir / f"{id}.png"
+        out_file = file_path
         # 用户词典
         with open(userdict_path, encoding="utf-8") as f_user:
             f_user_text = f_user.read()

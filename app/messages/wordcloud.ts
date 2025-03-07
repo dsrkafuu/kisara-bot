@@ -18,11 +18,11 @@ const middleware: OnionMiddleware<OB11Message> = async (data, ctx, next) => {
   // 有关键词词云，并且字数小于 10
   if (sourceTextSplits.length > 1 && fullSimpleText.length < 10) {
     // 单人 QQ 号限流，群组请求者 QQ 限流
-    let limitKey = `help_private_${data.user_id}`;
+    let limitKey = `wordcloud_private_${data.user_id}`;
     if (data.message_type === 'group') {
-      limitKey = `help_group_${data.user_id}`;
+      limitKey = `wordcloud_group_${data.user_id}`;
     }
-    const rateLimiter = getRateLimiter(limitKey, 300);
+    const rateLimiter = getRateLimiter(limitKey, 10);
     if (rateLimiter.check()) {
       const logId = message_type === 'group' ? `${group_id}` : `${user_id}`;
       const logName = `${message_type}_${logId}_${lastDay.format('YYYYMMDD')}.log`;
@@ -78,7 +78,15 @@ const middleware: OnionMiddleware<OB11Message> = async (data, ctx, next) => {
 
       // 构建词云
       try {
-        const result = await genWordcloud(userText.replaceAll('\n', ''));
+        let wcname = `${message_type}`;
+        if (message_type === 'group') {
+          wcname += `_${group_id}`;
+        }
+        wcname += `_${user_id}_${lastDay.format('YYYYMMDD')}`;
+        const result = await genWordcloud(
+          wcname,
+          userText.replaceAll('\n', '')
+        );
         if (!result) {
           await ctx.send([getText('生成词云失败，请以后再试')], {
             quoteSender: true,
@@ -86,12 +94,7 @@ const middleware: OnionMiddleware<OB11Message> = async (data, ctx, next) => {
           ctx.swap.wordcloud = true;
           return;
         }
-        const filePath = path.resolve(
-          process.cwd(),
-          './wordcloud/out',
-          `${result}.png`
-        );
-        await ctx.send([getText('你的昨日发言词云'), getImage(filePath)], {
+        await ctx.send([getText('你的昨日发言词云'), getImage(result)], {
           quoteSender: true,
         });
       } catch (e: any) {
