@@ -15,7 +15,7 @@ const genWordcloud = (name: string, article: string) => {
   const filePath = path.resolve(OUT_DIR, `${name}.png`);
   if (fse.existsSync(filePath)) {
     logger.info('wordcloud', `cache hit: ${filePath}`);
-    return Promise.resolve(name);
+    return Promise.resolve(filePath);
   }
 
   return new Promise<string | null>((resolve, reject) => {
