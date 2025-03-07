@@ -66,24 +66,15 @@ const getMessageLog = (dbLineObj: OB11Message, botQQId?: number) => {
 /** LLM 网友中间件 */
 const middleware: OnionMiddleware<OB11Message> = async (data, ctx, next) => {
   const { message_type, user_id, group_id, time } = data;
+  const botQQId = data.self_id;
+  const isAtBot = ctx.parsed.at_bot;
   const dayTime = dayjs(time * 1000);
 
   // 触发概率
   const randTrigger = Math.random() < llmConfig.triggerProb;
-  const botQQId = data.self_id;
 
   // 当前这句话
   const thisMessageEntry = getMessageLog(data, botQQId);
-
-  // 是否 at 机器人，是否 at 其他人
-  let isAtBot = false;
-  if (typeof data.message !== 'string' && botQQId) {
-    isAtBot =
-      message_type === 'group' &&
-      data.message.some((item) => {
-        return item.type === 'at' && `${item.data.qq}` === `${botQQId}`;
-      });
-  }
 
   // 命中概率加当前这句话有内容，或直接 at 机器人
   if ((randTrigger && thisMessageEntry) || isAtBot) {
@@ -93,7 +84,7 @@ const middleware: OnionMiddleware<OB11Message> = async (data, ctx, next) => {
     let dbFile: string = '';
     try {
       if (fse.existsSync(filePath)) {
-        dbFile = await fse.readFile(filePath, 'utf-8');
+        dbFile = fse.readFileSync(filePath, 'utf-8');
       }
     } catch (e) {
       logger.error('llm', 'read db file error', e);

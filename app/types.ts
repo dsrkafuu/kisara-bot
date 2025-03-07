@@ -13,6 +13,14 @@ export interface SwapRecord {
   prompt_tr?: boolean;
   /** 活字印刷 */
   hzys?: boolean;
+  /** 词云 */
+  wordcloud?: boolean;
+}
+
+export interface ParsedMessageMeta {
+  bot_id?: number;
+  at_bot?: boolean;
+  at_others?: boolean;
 }
 
 /** Bot 上下文 */
@@ -23,6 +31,8 @@ export interface BotContext {
   ws: WebSocket;
   /** NapCat 客户端连接和状态 */
   clients: Map<WebSocket, boolean>;
+  /** 消息解析后的基础信息 */
+  parsed: ParsedMessageMeta;
   /** 插件标记数据 */
   swap: SwapRecord;
   /** 通知 db 当次完成后写入的消息 */

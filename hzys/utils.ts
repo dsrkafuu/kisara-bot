@@ -1,6 +1,6 @@
-import logger from '@app/logger';
 import fs from 'fs';
 import path from 'path';
+import { logger } from '@app/logger';
 
 /**
  * 清理目录中的过期文件

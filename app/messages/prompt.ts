@@ -8,21 +8,10 @@ import { OB11Message } from '@napcat/onebot';
 
 /** LLM 问答中间件 */
 const middleware: OnionMiddleware<OB11Message> = async (data, ctx, next) => {
-  const { user_id, message_type } = data;
-
-  // 是否 at 其他人
-  const botQQId = data.self_id;
-  let isAtOthers = false;
-  if (typeof data.message !== 'string' && botQQId) {
-    isAtOthers =
-      message_type === 'group' &&
-      data.message.some((item) => {
-        return item.type === 'at' && `${item.data.qq}` !== `${botQQId}`;
-      });
-  }
+  const { user_id } = data;
 
   // 如果不是 at 其他人
-  if (!isAtOthers) {
+  if (!ctx.parsed.at_others) {
     const fullSimpleText = getSimpleText(data);
     const qaSourceTextSplits = fullSimpleText.split('那我问你');
     const rpSourceTextSplits = fullSimpleText.split('锐评一下');

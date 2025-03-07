@@ -1,4 +1,4 @@
-import OnionCenter from '@app/onion';
+import { OnionCenter } from '@app/onion';
 import { BotContext } from '@app/types';
 import { OB11BaseMetaEvent } from '@napcat/onebot/event/meta/OB11BaseMetaEvent';
 import lifecycle from './lifecycle';

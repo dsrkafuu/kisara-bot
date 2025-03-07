@@ -4,6 +4,7 @@ import {
   OB11Message,
   OB11MessageData,
   OB11MessageDataType,
+  OB11MessageImage,
   OB11MessageRecord,
   OB11MessageReply,
   OB11MessageText,
@@ -59,6 +60,14 @@ export const getText = (text: string): OB11MessageText => {
   return {
     type: OB11MessageDataType.text,
     data: { text },
+  };
+};
+
+/** 获取一条图片消息 */
+export const getImage = (filePath: string): OB11MessageImage => {
+  return {
+    type: OB11MessageDataType.image,
+    data: { file: `file://${filePath}` },
   };
 };
 

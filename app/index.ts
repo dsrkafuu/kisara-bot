@@ -1,4 +1,5 @@
 import { WebSocketServer, WebSocket } from 'ws';
+import { OB11Message } from '@napcat/onebot';
 import { logger } from './logger';
 import { echoCenter, sendMessage } from './respond';
 import { BotContext } from './types';
@@ -13,13 +14,13 @@ wss.on('connection', (ws) => {
   clients.set(ws, false);
   ws.on('message', (message) => {
     try {
-      const data = JSON.parse(`${message}`);
+      const event = JSON.parse(`${message}`);
 
       // 发送回调
-      if (data.echo && echoCenter.has(data.echo)) {
-        const respondEcho = echoCenter.get(data.echo);
+      if (event.echo && echoCenter.has(event.echo)) {
+        const respondEcho = echoCenter.get(event.echo);
         if (respondEcho && respondEcho.resolve) {
-          respondEcho.resolve(data);
+          respondEcho.resolve(event);
         }
         return;
       }
@@ -29,14 +30,32 @@ wss.on('connection', (ws) => {
         status: clients.get(ws) || false,
         ws,
         clients,
+        parsed: {},
         swap: {},
         db: { records: [] },
-        send: (...args) => sendMessage(data, ctx, ...args),
+        send: (...args) => sendMessage(event, ctx, ...args),
       };
-      if (data.post_type) {
-        if (data.post_type === 'meta_event') {
-          handleMetaEvent(data, ctx);
-        } else if (data.post_type === 'message') {
+      if (event.post_type) {
+        // 基本 meta_event 事件
+        if (event.post_type === 'meta_event') {
+          handleMetaEvent(event, ctx);
+        }
+
+        // 普通消息事件
+        else if (event.post_type === 'message') {
+          // 消息初步解析
+          const data = event as OB11Message;
+          const { self_id, message_type, message } = data;
+          ctx.parsed.bot_id = self_id || 0;
+          if (message_type === 'group' && typeof message !== 'string') {
+            ctx.parsed.at_bot = message.some((item) => {
+              return item.type === 'at' && `${item.data.qq}` === `${self_id}`;
+            });
+            ctx.parsed.at_others = message.some((item) => {
+              return item.type === 'at' && `${item.data.qq}` !== `${self_id}`;
+            });
+          }
+
           // 白名单过滤
           if (data.message_type === 'group') {
             if (GROUP_WHITELIST.includes(`${data.group_id}`)) {
@@ -53,10 +72,10 @@ wss.on('connection', (ws) => {
           }
         }
       } else {
-        logger.warn('main', 'unknown message', JSON.stringify(data));
+        logger.warn('main', 'unknown event', JSON.stringify(event));
       }
     } catch (e) {
-      logger.error('main', 'message parse error', e);
+      logger.error('main', 'event parse error', e);
     }
   });
 });

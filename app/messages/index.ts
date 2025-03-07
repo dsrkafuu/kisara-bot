@@ -5,6 +5,7 @@ import { OB11Message } from '@napcat/onebot';
 import db from './db';
 import help from './help';
 import hzys from './hzys';
+import wordcloud from './wordcloud';
 import prompt from './prompt';
 import llm from './llm';
 
@@ -26,6 +27,9 @@ const handler = async (data: OB11Message, ctx: BotContext) => {
 
   // 活字印刷
   onion.use(hzys);
+
+  // 词云
+  onion.use(wordcloud);
 
   // LLM 问答
   onion.use(prompt);

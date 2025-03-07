@@ -15,6 +15,7 @@
       "@config/*": ["./config/*"],
       "@app/*": ["./app/*"],
       "@hzys/*": ["./hzys/*"],
+      "@wordcloud/*": ["./wordcloud/*"],
       "@napcat/*": ["./NapCatQQ/src/*"]
     }
   }
