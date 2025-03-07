@@ -3,7 +3,7 @@ import {
   OB11MessageData,
   OB11MessageDataType,
 } from '@napcat/onebot';
-import logger from './logger';
+import { logger } from './logger';
 
 const rateLimit = new Map<string, number>();
 
@@ -34,10 +34,12 @@ export const getRateLimiter = (key: string, limit: number) => {
 
 /**
  * 获取合并后的所有纯文本消息
+ * @param data 消息数据
+ * @param options 允许的额外消息类型
  */
 export const getSimpleText = (
   data: Partial<OB11Message>,
-  options?: { at?: boolean }
+  options: { allowAt?: boolean } = {}
 ) => {
   const textMessages: OB11MessageData[] = [];
   if (typeof data.message === 'string') {
@@ -46,25 +48,26 @@ export const getSimpleText = (
       data: { text: data.message },
     });
   } else if (data.message) {
-    if (options?.at) {
-      textMessages.push(
-        ...data.message.filter(
-          (message) => message.type === 'text' || message.type === 'at'
-        )
-      );
-    } else {
-      textMessages.push(
-        ...data.message.filter((message) => message.type === 'text')
-      );
-    }
+    textMessages.push(
+      ...data.message.filter((message) => {
+        if (options.allowAt) {
+          return (
+            message.type === OB11MessageDataType.text ||
+            message.type === OB11MessageDataType.at
+          );
+        } else {
+          return message.type === OB11MessageDataType.text;
+        }
+      })
+    );
   }
 
   const fullSimpleText = textMessages
     .map((message) => {
       let ret = '';
-      if (message.type === 'text') {
+      if (message.type === OB11MessageDataType.text) {
         ret = message.data.text || '';
-      } else if (message.type === 'at') {
+      } else if (message.type === OB11MessageDataType.at) {
         ret = `@${message.data.qq}`;
       } else {
         ret = '';

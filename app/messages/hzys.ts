@@ -1,8 +1,8 @@
-import { OB11Message } from '@napcat/onebot';
-import hzys from '@hzys/index';
 import { getRecord, getText } from '@app/respond';
 import { OnionMiddleware } from '@app/types';
 import { getRateLimiter, getSimpleText } from '@app/utils';
+import hzys from '@hzys/index';
+import { OB11Message } from '@napcat/onebot';
 
 /**
  * 活字印刷能力中间件

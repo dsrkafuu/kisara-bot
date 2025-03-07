@@ -1,10 +1,10 @@
-import logger from './logger';
+import { logger } from './logger';
 import { BotContext, OnionMiddleware } from './types';
 
 /**
  * 中间件能力
  */
-class OnionCenter<D> {
+export class OnionCenter<D> {
   private middlewares: OnionMiddleware<D>[] = [];
 
   private compose() {
@@ -29,9 +29,7 @@ class OnionCenter<D> {
     };
   }
 
-  /**
-   * 顺序执行中间件
-   */
+  /** 顺序执行中间件 */
   run = async (data: D, ctx: BotContext) => {
     const composed = this.compose();
     try {
@@ -42,12 +40,8 @@ class OnionCenter<D> {
     }
   };
 
-  /**
-   * 添加中间件
-   */
+  /** 添加中间件 */
   use = (...middlewares: OnionMiddleware<D>[]) => {
     this.middlewares = this.middlewares.concat(middlewares);
   };
 }
-
-export default OnionCenter;

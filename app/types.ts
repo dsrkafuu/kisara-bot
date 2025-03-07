@@ -1,6 +1,20 @@
 import { WebSocket } from 'ws';
 import { OB11Message, OB11MessageData } from '@napcat/onebot';
 
+export interface SwapRecord {
+  help?: boolean;
+  /** LLM 网友 */
+  llm?: boolean;
+  /** 那我问你 */
+  prompt_qa?: boolean;
+  /** 锐评一下 */
+  prompt_rp?: boolean;
+  /** 帮我翻译 */
+  prompt_tr?: boolean;
+  /** 活字印刷 */
+  hzys?: boolean;
+}
+
 /** Bot 上下文 */
 export interface BotContext {
   /** NapCat 状态 */
@@ -10,7 +24,7 @@ export interface BotContext {
   /** NapCat 客户端连接和状态 */
   clients: Map<WebSocket, boolean>;
   /** 插件标记数据 */
-  swap: Record<string, any>;
+  swap: SwapRecord;
   /** 通知 db 当次完成后写入的消息 */
   db: {
     records: OB11Message[];
@@ -19,23 +33,17 @@ export interface BotContext {
   send: (message: OB11MessageData[], options?: RespondOptions) => Promise<void>;
 }
 
-/**
- * 中间件
- */
+/** 中间件 */
 export interface OnionMiddleware<D> {
   (event: D, ctx: BotContext, next: () => Promise<void>): Promise<void>;
 }
 
-/**
- * 响应选项
- */
+/** 响应选项 */
 export interface RespondOptions {
   quoteSender?: boolean;
 }
 
-/**
- * 响应回调
- */
+/** 响应回调 */
 export interface RespondEcho {
   timestamp: number;
   promise?: Promise<RespondEchoData>;
@@ -43,9 +51,7 @@ export interface RespondEcho {
   reject?: (reason?: any) => void;
 }
 
-/**
- * 响应数据
- */
+/** 响应数据 */
 export interface RespondEchoData {
   echo: string;
   status: string;

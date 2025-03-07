@@ -1,28 +1,28 @@
-import path from 'path';
-import fs from 'fs';
 import chalk from 'chalk';
 import dayjs from 'dayjs';
+import fse from 'fs-extra';
+import path from 'path';
 
 const now = () => `[${dayjs().format('YYYY-MM-DD HH:mm:ss')}]`;
 
 const logsFolder = path.resolve(process.cwd(), './logs');
-if (!fs.existsSync(logsFolder)) {
-  fs.mkdirSync(logsFolder);
+if (!fse.existsSync(logsFolder)) {
+  fse.mkdirSync(logsFolder);
 }
 
 const saveLog = async (prefix: string[], ...args: any[]) => {
   const date = dayjs().format('YYYYMMDD');
   const logPath = path.resolve(logsFolder, `${date}.stdout.log`);
-  fs.appendFileSync(logPath, `${prefix.join(' ')} ${args.join(' ')}\n`);
+  fse.appendFileSync(logPath, `${prefix.join(' ')} ${args.join(' ')}\n`);
 };
 
 const saveError = async (prefix: string[], ...args: any[]) => {
   const date = dayjs().format('YYYYMMDD');
   const logPath = path.resolve(logsFolder, `${date}.stderr.log`);
-  fs.appendFileSync(logPath, `${prefix.join(' ')} ${args.join(' ')}\n`);
+  fse.appendFileSync(logPath, `${prefix.join(' ')} ${args.join(' ')}\n`);
 };
 
-const logger = {
+export const logger = {
   info: (module: string, ...args: any[]) => {
     const prefix = [now(), '<info>', `{${module}}`];
     console.info(
@@ -67,5 +67,3 @@ const logger = {
     );
   },
 };
-
-export default logger;

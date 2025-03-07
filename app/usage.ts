@@ -1,10 +1,11 @@
-import path from 'path';
-import fse from 'fs-extra';
 import dayjs from 'dayjs';
+import fse from 'fs-extra';
+import path from 'path';
 import { DB_DIR } from './constants';
+import { logger } from './logger';
 import { RecordUsage } from './types';
-import logger from './logger';
 
+/** 获取某个时间点那一天的使用情况 */
 export const getRecordUsage = async (
   timestamp: number
 ): Promise<RecordUsage | null> => {
@@ -16,7 +17,7 @@ export const getRecordUsage = async (
     return null;
   }
   try {
-    const res = await fse.readJSON(filePath);
+    const res = fse.readJSONSync(filePath);
     if (res.times) {
       return { day: dayjs(timestamp).format('YYYY-MM-DD'), ...res };
     } else {
@@ -44,14 +45,14 @@ export const recordUsage = async (usage?: any) => {
     const oldRecord = await getRecordUsage(timestamp);
     try {
       if (!oldRecord) {
-        await fse.writeJSON(filePath, { times: 1, ...newRecord });
+        fse.writeJsonSync(filePath, { times: 1, ...newRecord });
       } else {
         const newTimes = oldRecord.times + 1;
         const newCT = oldRecord.completion_tokens + newRecord.completion_tokens;
         const newPT = oldRecord.prompt_tokens + newRecord.prompt_tokens;
         const newTT = oldRecord.total_tokens + newRecord.total_tokens;
         const newRT = oldRecord.reasoning_tokens + newRecord.reasoning_tokens;
-        await fse.writeJSON(filePath, {
+        fse.writeJsonSync(filePath, {
           times: newTimes,
           completion_tokens: newCT,
           prompt_tokens: newPT,

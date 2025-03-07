@@ -1,14 +1,14 @@
-import path from 'path';
-import fse from 'fs-extra';
 import dayjs from 'dayjs';
-import { OB11Message } from '@napcat/onebot';
-import llmConfig from '@config/llm.json';
-import logger from '@app/logger';
+import fse from 'fs-extra';
+import path from 'path';
+import { DB_DIR } from '@app/constants';
+import { logger } from '@app/logger';
 import { requestLLM } from '@app/request';
 import { getText } from '@app/respond';
 import { OnionMiddleware } from '@app/types';
 import { getRateLimiter, getSimpleText } from '@app/utils';
-import { DB_DIR } from '@app/constants';
+import llmConfig from '@config/llm.json';
+import { OB11Message } from '@napcat/onebot';
 
 /** 获取未回复的消息 ID 列表 */
 const getResponded = (): Set<string> => {
@@ -48,7 +48,7 @@ const appendResponded = (messageSet: Set<string>, messageIds: string[]) => {
 
 /** 获取文本形式的消息记录 */
 const getMessageLog = (dbLineObj: OB11Message, botQQId?: number) => {
-  const simpleText = getSimpleText(dbLineObj, { at: true });
+  const simpleText = getSimpleText(dbLineObj, { allowAt: true });
   if (simpleText) {
     const timeStr = dayjs(dbLineObj.time * 1000).format('M月D日H时m分');
     let senderStr = dbLineObj.sender.nickname;
@@ -63,15 +63,19 @@ const getMessageLog = (dbLineObj: OB11Message, botQQId?: number) => {
   }
 };
 
-/**
- * LLM 网友中间件
- */
+/** LLM 网友中间件 */
 const middleware: OnionMiddleware<OB11Message> = async (data, ctx, next) => {
   const { message_type, user_id, group_id, time } = data;
   const dayTime = dayjs(time * 1000);
 
+  // 触发概率
   const randTrigger = Math.random() < llmConfig.triggerProb;
   const botQQId = data.self_id;
+
+  // 当前这句话
+  const thisMessageEntry = getMessageLog(data, botQQId);
+
+  // 是否 at 机器人，是否 at 其他人
   let isAtBot = false;
   if (typeof data.message !== 'string' && botQQId) {
     isAtBot =
@@ -81,7 +85,8 @@ const middleware: OnionMiddleware<OB11Message> = async (data, ctx, next) => {
       });
   }
 
-  if (randTrigger || isAtBot) {
+  // 命中概率加当前这句话有内容，或直接 at 机器人
+  if ((randTrigger && thisMessageEntry) || isAtBot) {
     const logId = message_type === 'group' ? `${group_id}` : `${user_id}`;
     const logName = `${message_type}_${logId}_${dayTime.format('YYYYMMDD')}.log`;
     const filePath = path.resolve(DB_DIR, logName);
@@ -190,10 +195,9 @@ const middleware: OnionMiddleware<OB11Message> = async (data, ctx, next) => {
             notRespondedLines.push(recordLine);
           }
         }
-        const thisMessageEntry = getMessageLog(data, botQQId);
 
         // 至少有 5 条未回复的消息记录，除非是直接 at 机器人
-        if (notRespondedLines.length > 5 || isAtBot) {
+        if (notRespondedLines.length > llmConfig.minUnresponded || isAtBot) {
           // 已经回复过的消息记录
           let userPrompt = `这是之前的群聊消息记录：${alreadyRespondedLines.join('。')}。`;
           // 未回复的消息记录
@@ -241,14 +245,14 @@ const middleware: OnionMiddleware<OB11Message> = async (data, ctx, next) => {
             );
 
             // 如果超过两句，只取最后两句
-            if (resArr.length > 2) {
+            if (resArr.length > llmConfig.maxSentences) {
               resArr = resArr.slice(resArr.length - 2);
             }
             // 发送回复
             await ctx.send([getText(resArr[0])]);
             if (resArr[1]) {
               // 一个字等待 500 毫秒
-              const p1Wait = resArr[1].length * 500;
+              const p1Wait = resArr[1].length * llmConfig.waitEveryWord;
               await new Promise((resolve) => setTimeout(resolve, p1Wait));
               await ctx.send([getText(resArr[1])]);
             }

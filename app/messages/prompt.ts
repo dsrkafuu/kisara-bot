@@ -1,14 +1,12 @@
-import { OB11Message } from '@napcat/onebot';
 import { OnionMiddleware } from '@app/types';
 import { clearifyText, getRateLimiter, getSimpleText } from '@app/utils';
+import { logger } from '@app/logger';
+import { requestLLM } from '@app/request';
 import { getText } from '@app/respond';
 import promptConfig from '@config/prompt.json';
-import { requestLLM } from '@app/request';
-import logger from '@app/logger';
+import { OB11Message } from '@napcat/onebot';
 
-/**
- * LLM 问答中间件
- */
+/** LLM 问答中间件 */
 const middleware: OnionMiddleware<OB11Message> = async (data, ctx, next) => {
   const { user_id } = data;
   const fullSimpleText = getSimpleText(data);
@@ -17,16 +15,17 @@ const middleware: OnionMiddleware<OB11Message> = async (data, ctx, next) => {
   const trSourceTextSplits = fullSimpleText.split('帮我翻译');
 
   if (qaSourceTextSplits.length > 1) {
-    const inputText = qaSourceTextSplits
-      .map((text) => text.trim())
-      .join(' ')
-      .trim();
     // 单人 QQ 号限流，群组请求者 QQ 限流
     let limitKey = `prompt_qa_private_${user_id}`;
     if (data.message_type === 'group') {
       limitKey = `prompt_qa_group_${user_id}`;
     }
     const rateLimiter = getRateLimiter(limitKey, 10);
+
+    const inputText = qaSourceTextSplits
+      .map((text) => text.trim())
+      .join(' ')
+      .trim();
     if (inputText) {
       try {
         if (rateLimiter.check()) {
@@ -54,6 +53,7 @@ const middleware: OnionMiddleware<OB11Message> = async (data, ctx, next) => {
         logger.error('prompt', 'qa error', e);
         await ctx.send([getText('那我问你出现内部错误，请联系木更一号')]);
       }
+
       // 不需要其他插件了
       ctx.swap.prompt_qa = true;
       return;
@@ -61,16 +61,17 @@ const middleware: OnionMiddleware<OB11Message> = async (data, ctx, next) => {
   }
 
   if (rpSourceTextSplits.length > 1) {
-    const inputText = rpSourceTextSplits
-      .map((text) => text.trim())
-      .join(' ')
-      .trim();
     // 单人 QQ 号限流，群组请求者 QQ 限流
     let limitKey = `prompt_rp_private_${user_id}`;
     if (data.message_type === 'group') {
       limitKey = `prompt_rp_group_${user_id}`;
     }
     const rateLimiter = getRateLimiter(limitKey, 10);
+
+    const inputText = rpSourceTextSplits
+      .map((text) => text.trim())
+      .join(' ')
+      .trim();
     if (inputText) {
       try {
         if (rateLimiter.check()) {
@@ -94,6 +95,7 @@ const middleware: OnionMiddleware<OB11Message> = async (data, ctx, next) => {
         logger.error('prompt', 'rp error', e);
         await ctx.send([getText('锐评一下出现内部错误，请联系木更一号')]);
       }
+
       // 不需要其他插件了
       ctx.swap.prompt_rp = true;
       return;
@@ -101,16 +103,17 @@ const middleware: OnionMiddleware<OB11Message> = async (data, ctx, next) => {
   }
 
   if (trSourceTextSplits.length > 1) {
-    const inputText = trSourceTextSplits
-      .map((text) => text.trim())
-      .join(' ')
-      .trim();
     // 单人 QQ 号限流，群组请求者 QQ 限流
     let limitKey = `prompt_tr_private_${user_id}`;
     if (data.message_type === 'group') {
       limitKey = `prompt_tr_group_${user_id}`;
     }
     const rateLimiter = getRateLimiter(limitKey, 10);
+
+    const inputText = trSourceTextSplits
+      .map((text) => text.trim())
+      .join(' ')
+      .trim();
     if (inputText) {
       try {
         if (rateLimiter.check()) {
@@ -134,6 +137,7 @@ const middleware: OnionMiddleware<OB11Message> = async (data, ctx, next) => {
         logger.error('prompt', 'tr error', e);
         await ctx.send([getText('翻译出现内部错误，请联系木更一号')]);
       }
+
       // 不需要其他插件了
       ctx.swap.prompt_tr = true;
       return;

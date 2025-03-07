@@ -1,7 +1,7 @@
-import { OB11Message } from '@napcat/onebot';
-import logger from '@app/logger';
-import OnionCenter from '@app/onion';
+import { logger } from '@app/logger';
+import { OnionCenter } from '@app/onion';
 import { BotContext } from '@app/types';
+import { OB11Message } from '@napcat/onebot';
 import db from './db';
 import help from './help';
 import hzys from './hzys';
@@ -15,17 +15,24 @@ const handler = async (data: OB11Message, ctx: BotContext) => {
   if (!ctx.status) {
     logger.warn('message', 'napcat before connected');
   }
+
   const onion = new OnionCenter<OB11Message>();
+
   // 消息记录
   onion.use(db);
-  // 消息记录
+
+  // 帮助
   onion.use(help);
+
   // 活字印刷
   onion.use(hzys);
+
   // LLM 问答
   onion.use(prompt);
-  // LLM 回复
+
+  // LLM 网友
   onion.use(llm);
+
   await onion.run(data, ctx);
 };
 

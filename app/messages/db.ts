@@ -1,10 +1,10 @@
-import path from 'path';
-import fse from 'fs-extra';
 import dayjs from 'dayjs';
-import { OB11Message } from '@napcat/onebot';
+import fse from 'fs-extra';
+import path from 'path';
 import { DB_DIR } from '@app/constants';
-import logger from '@app/logger';
+import { logger } from '@app/logger';
 import { OnionMiddleware } from '@app/types';
+import { OB11Message } from '@napcat/onebot';
 
 /** 打一条 DB 日志 */
 const logStdout = (data: OB11Message) => {
@@ -36,9 +36,7 @@ const logStdout = (data: OB11Message) => {
   }
 };
 
-/**
- * 消息记录中间件
- */
+/** 消息记录中间件 */
 const middleware: OnionMiddleware<OB11Message> = async (data, ctx, next) => {
   await next();
   // 消息记录放到其他中间件之后，记录应用的插件信息

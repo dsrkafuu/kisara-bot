@@ -1,4 +1,5 @@
 import { nanoid, customAlphabet } from 'nanoid';
+import appConfig from '@config/app.json';
 import {
   OB11Message,
   OB11MessageData,
@@ -7,8 +8,7 @@ import {
   OB11MessageReply,
   OB11MessageText,
 } from '@napcat/onebot';
-import appConfig from '@config/app.json';
-import logger from './logger';
+import { logger } from './logger';
 import { BotContext, RespondEcho, RespondOptions } from './types';
 import { getSimpleText } from './utils';
 
@@ -17,9 +17,7 @@ const loginInfo = { user_id: 0, nickname: '' };
 
 export const echoCenter = new Map<string, RespondEcho>();
 
-/**
- * 获取一个用于监听回调的 echo
- */
+/** 获取一个用于监听回调的 echo */
 export const registerEcho = () => {
   const echo = nanoid();
   const timestamp = Date.now();
@@ -56,6 +54,7 @@ export const registerEcho = () => {
   return { timestamp, echo, respond: respondEcho };
 };
 
+/** 获取一条文本消息 */
 export const getText = (text: string): OB11MessageText => {
   return {
     type: OB11MessageDataType.text,
@@ -63,6 +62,7 @@ export const getText = (text: string): OB11MessageText => {
   };
 };
 
+/** 获取一条语音消息 */
 export const getRecord = (filePath: string): OB11MessageRecord => {
   return {
     type: OB11MessageDataType.voice,
@@ -70,6 +70,7 @@ export const getRecord = (filePath: string): OB11MessageRecord => {
   };
 };
 
+/** 获取一条回复消息 */
 export const getReply = (messageId: number | string): OB11MessageReply => {
   return {
     type: OB11MessageDataType.reply,
@@ -77,13 +78,14 @@ export const getReply = (messageId: number | string): OB11MessageReply => {
   };
 };
 
+/** 发送 QQ 消息 */
 export const sendMessage = async (
   data: OB11Message,
   ctx: BotContext,
   message: OB11MessageData[],
-  options?: RespondOptions
+  options: RespondOptions = {}
 ) => {
-  const { quoteSender } = options || {};
+  const { quoteSender } = options;
 
   const { timestamp, echo, respond } = registerEcho();
   const messageType = data.message_type || 'private';
@@ -153,11 +155,15 @@ export const sendMessage = async (
       dbEntry.group_id = groupId;
     }
 
-    // 通知写 db
+    // 通知后面写 db
     ctx.db.records.push(dbEntry);
   }
 };
 
+/**
+ * 获取 Bot QQ 信息
+ * @param ctx Bot 上下文
+ */
 export const getLoginInfo = async (ctx: BotContext) => {
   if (loginInfo.user_id) {
     return loginInfo;

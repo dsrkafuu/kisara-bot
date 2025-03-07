@@ -1,23 +1,10 @@
 import { WebSocketServer, WebSocket } from 'ws';
-import logger from './logger';
+import { logger } from './logger';
+import { echoCenter, sendMessage } from './respond';
 import { BotContext } from './types';
 import handleMetaEvent from './meta';
 import handleMessageEvent from './messages';
-import { echoCenter, sendMessage } from './respond';
-import appConfig from '@config/app.json';
-
-const GROUP_WHITELIST = appConfig.whitelist
-  .map((entry) => {
-    const [type, id] = entry.split('_');
-    if (type === 'group') return type === 'group' ? id : '';
-  })
-  .filter((id) => !!id);
-const PRIVATE_WHITELIST = appConfig.whitelist
-  .map((entry) => {
-    const [type, id] = entry.split('_');
-    if (type === 'private') return type === 'private' ? id : '';
-  })
-  .filter((id) => !!id);
+import { GROUP_WHITELIST, PRIVATE_WHITELIST } from './constants';
 
 const wss = new WebSocketServer({ host: '127.0.0.1', port: 1145 });
 const clients = new Map<WebSocket, boolean>();
@@ -51,16 +38,18 @@ wss.on('connection', (ws) => {
           handleMetaEvent(data, ctx);
         } else if (data.post_type === 'message') {
           // 白名单过滤
-          if (
-            data.message_type === 'group' &&
-            GROUP_WHITELIST.includes(`${data.group_id}`)
-          ) {
-            handleMessageEvent(data, ctx);
-          } else if (
-            data.message_type === 'private' &&
-            PRIVATE_WHITELIST.includes(`${data.user_id}`)
-          ) {
-            handleMessageEvent(data, ctx);
+          if (data.message_type === 'group') {
+            if (GROUP_WHITELIST.includes(`${data.group_id}`)) {
+              handleMessageEvent(data, ctx);
+            } else {
+              logger.info('main', 'group message filtered', data.group_id);
+            }
+          } else if (data.message_type === 'private') {
+            if (PRIVATE_WHITELIST.includes(`${data.user_id}`)) {
+              handleMessageEvent(data, ctx);
+            } else {
+              logger.info('main', 'private message filtered', data.user_id);
+            }
           }
         }
       } else {

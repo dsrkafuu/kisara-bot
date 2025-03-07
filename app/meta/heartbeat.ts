@@ -1,7 +1,7 @@
+import { logger } from '@app/logger';
+import { OnionMiddleware } from '@app/types';
 import { OB11BaseMetaEvent } from '@napcat/onebot/event/meta/OB11BaseMetaEvent';
 import { OB11HeartbeatEvent } from '@napcat/onebot/event/meta/OB11HeartbeatEvent';
-import { OnionMiddleware } from '@app/types';
-import logger from '@app/logger';
 
 /**
  * 心跳包监测中间件

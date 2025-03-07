@@ -1,14 +1,11 @@
 import dayjs from 'dayjs';
-import { OB11Message } from '@napcat/onebot';
-import helpConfig from '@config/help.json';
 import { getText } from '@app/respond';
 import { OnionMiddleware } from '@app/types';
 import { getRateLimiter, getSimpleText } from '@app/utils';
 import { getRecordUsage } from '@app/usage';
+import helpConfig from '@config/help.json';
+import { OB11Message } from '@napcat/onebot';
 
-/**
- * 活字印刷能力中间件
- */
 const middleware: OnionMiddleware<OB11Message> = async (data, ctx, next) => {
   const fullSimpleText = getSimpleText(data);
   const sourceTextSplits = fullSimpleText.split('帮助');
