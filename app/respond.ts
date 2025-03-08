@@ -165,7 +165,7 @@ export const sendMessage = async (
     }
 
     // 通知后面写 db
-    ctx.db.records.push(dbEntry);
+    ctx.records.push(dbEntry);
   }
 };
 

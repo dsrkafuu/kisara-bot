@@ -53,6 +53,25 @@ const middleware: OnionMiddleware<OB11Message> = async (data, ctx, next) => {
         helpText += `\n今日 (${t.times}|${Math.round(t.total_tokens)}|${Math.round(t.prompt_tokens)}|${Math.round(t.completion_tokens)}|${Math.round(t.reasoning_tokens)})`;
       }
 
+      helpText += '\n\nVision 使用量 (次数|合计|请求|生成)：';
+      const vy = await getRecordUsage(
+        dayjs(data.time * 1000)
+          .subtract(1, 'day')
+          .valueOf(),
+        'vision'
+      );
+      if (!vy || !vy.times) {
+        helpText += '\n昨日 (未使用或统计失败)';
+      } else {
+        helpText += `\n昨日 (${vy.times}|${Math.round(vy.total_tokens)}|${Math.round(vy.prompt_tokens)}|${Math.round(vy.completion_tokens)})`;
+      }
+      const vt = await getRecordUsage(data.time * 1000, 'vision');
+      if (!vt || !vt.times) {
+        helpText += '\n今日 (未使用或统计失败)';
+      } else {
+        helpText += `\n今日 (${vt.times}|${Math.round(vt.total_tokens)}|${Math.round(vt.prompt_tokens)}|${Math.round(vt.completion_tokens)})`;
+      }
+
       await ctx.send([getText(helpText)]);
     }
 

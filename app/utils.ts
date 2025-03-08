@@ -39,8 +39,16 @@ export const getRateLimiter = (key: string, limit: number) => {
  */
 export const getSimpleText = (
   data: Partial<OB11Message>,
-  options: { allowAt?: boolean } = {}
+  options: { allowAt?: boolean; allowImage?: boolean } = {}
 ) => {
+  const allowedTypes = [OB11MessageDataType.text];
+  if (options.allowAt) {
+    allowedTypes.push(OB11MessageDataType.at);
+  }
+  if (options.allowImage) {
+    allowedTypes.push(OB11MessageDataType.image);
+  }
+
   const textMessages: OB11MessageData[] = [];
   if (typeof data.message === 'string') {
     textMessages.push({
@@ -50,14 +58,7 @@ export const getSimpleText = (
   } else if (data.message) {
     textMessages.push(
       ...data.message.filter((message) => {
-        if (options.allowAt) {
-          return (
-            message.type === OB11MessageDataType.text ||
-            message.type === OB11MessageDataType.at
-          );
-        } else {
-          return message.type === OB11MessageDataType.text;
-        }
+        return allowedTypes.includes(message.type);
       })
     );
   }
@@ -69,6 +70,11 @@ export const getSimpleText = (
         ret = message.data.text || '';
       } else if (message.type === OB11MessageDataType.at) {
         ret = `@${message.data.qq}`;
+      } else if (
+        message.type === OB11MessageDataType.image &&
+        message.data.sub_type === 0
+      ) {
+        ret = message.data.summary || '';
       } else {
         ret = '';
       }

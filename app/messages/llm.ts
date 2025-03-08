@@ -3,7 +3,7 @@ import fse from 'fs-extra';
 import path from 'path';
 import { DB_DIR } from '@app/constants';
 import { logger } from '@app/logger';
-import { requestLLM } from '@app/request';
+import { requestLLM, visionImage } from '@app/request';
 import { getText } from '@app/respond';
 import { OnionMiddleware } from '@app/types';
 import { getRateLimiter, getSimpleText } from '@app/utils';
@@ -48,7 +48,10 @@ const appendResponded = (messageSet: Set<string>, messageIds: string[]) => {
 
 /** 获取文本形式的消息记录 */
 const getMessageLog = (dbLineObj: OB11Message, botQQId?: number) => {
-  const simpleText = getSimpleText(dbLineObj, { allowAt: true });
+  const simpleText = getSimpleText(dbLineObj, {
+    allowAt: true,
+    allowImage: true,
+  });
   if (simpleText) {
     const timeStr = dayjs(dbLineObj.time * 1000).format('M月D日H时m分');
     let senderStr = dbLineObj.sender.nickname;
@@ -73,11 +76,15 @@ const middleware: OnionMiddleware<OB11Message> = async (data, ctx, next) => {
   // 触发概率
   const randTrigger = Math.random() < llmConfig.triggerProb;
 
-  // 当前这句话
+  // 当前这句话，先看需不需要多模态读图
+  // 默认的识图这个过程在后续 db 插件里，比这里晚
+  // 需要的话在这里提前读好，并且告诉 db 不用再读了
+  await visionImage(data, ctx, 'llm');
   const thisMessageEntry = getMessageLog(data, botQQId);
 
   // 命中概率加当前这句话有内容，或直接 at 机器人
   if ((randTrigger && thisMessageEntry) || isAtBot) {
+    // 检查 db
     const logId = message_type === 'group' ? `${group_id}` : `${user_id}`;
     const logName = `${message_type}_${logId}_${dayTime.format('YYYYMMDD')}.log`;
     const filePath = path.resolve(DB_DIR, logName);
@@ -203,7 +210,7 @@ const middleware: OnionMiddleware<OB11Message> = async (data, ctx, next) => {
           if (isAtBot && thisMessageEntry) {
             userPrompt += `这是这次群友指定要你回复的记录：${thisMessageEntry.messageLog}。`;
           }
-          userPrompt += `消息记录格式为“群友昵称/你”说：“”。`;
+          userPrompt += `消息记录格式为“群友昵称/你”说：“”，记录中图片内容格式为[图片：内容解释]。`;
           userPrompt += `你要作为${Name}对未回复的群聊消息记录做出符合${Name}角色设定的回复。`;
           userPrompt += `确保回复充分体现${Name}的性格特征和情感反应。`;
           userPrompt += `不要称呼群友昵称，使用你或你们代指群友。`;

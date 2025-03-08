@@ -32,7 +32,8 @@ wss.on('connection', (ws) => {
         clients,
         parsed: {},
         swap: {},
-        db: { records: [] },
+        records: [],
+        vision: false,
         send: (...args) => sendMessage(event, ctx, ...args),
       };
       if (event.post_type) {

@@ -3,6 +3,7 @@ out/
 logs/
 venv/
 __pycache__/
+temp/
 db/*.log
 db/*.json
 config/*.json

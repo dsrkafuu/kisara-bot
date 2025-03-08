@@ -35,10 +35,10 @@ export interface BotContext {
   parsed: ParsedMessageMeta;
   /** 插件标记数据 */
   swap: SwapRecord;
-  /** 通知 db 当次完成后写入的消息 */
-  db: {
-    records: OB11Message[];
-  };
+  /** 这条消息是否已经被多模态读图 */
+  vision: boolean;
+  /** 通知 db 当次完成后需要额外插入的消息 */
+  records: OB11Message[];
   /** 发送 QQ 消息 */
   send: (message: OB11MessageData[], options?: RespondOptions) => Promise<void>;
 }

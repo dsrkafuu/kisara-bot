@@ -4,8 +4,8 @@ import path from 'path';
 import { DB_DIR, TEMP_DIR } from '@app/constants';
 import { logger } from '@app/logger';
 import { OnionMiddleware } from '@app/types';
-import { OB11Message, OB11MessageDataType } from '@napcat/onebot';
-import { requestVisionImage } from '@app/request';
+import { OB11Message } from '@napcat/onebot';
+import { visionImage } from '@app/request';
 
 const IMAGE_TEMP = path.resolve(TEMP_DIR, './images');
 fse.ensureDirSync(IMAGE_TEMP);
@@ -40,33 +40,6 @@ const logStdout = (data: OB11Message) => {
   }
 };
 
-/** 图像识别 */
-const visionImage = async (data: OB11Message) => {
-  const { message } = data;
-  if (typeof message !== 'string') {
-    for (const item of message) {
-      // 表情不做识别
-      if (
-        item.type === OB11MessageDataType.image &&
-        item.data.sub_type === 0 &&
-        /^https?:\/\//i.test(item.data.url || '')
-      ) {
-        logger.info('db', `request vision:\n${item.data.url}`);
-        try {
-          // 下载图片转换为 base64
-          const content = await requestVisionImage(item.data.url!);
-          logger.info('db', `respond vision: ${content}`);
-          if (content) {
-            item.data.summary = `[图片：${content}]`;
-          }
-        } catch (e) {
-          logger.error('db', 'request vision error', e);
-        }
-      }
-    }
-  }
-};
-
 /** 消息记录中间件 */
 const middleware: OnionMiddleware<OB11Message> = async (data, ctx, next) => {
   await next();
@@ -75,7 +48,7 @@ const middleware: OnionMiddleware<OB11Message> = async (data, ctx, next) => {
   try {
     const { message_type, user_id, group_id, time } = data;
     const dayTime = dayjs(time * 1000);
-    await visionImage(data);
+    await visionImage(data, ctx, 'db_normal');
     logStdout(data);
 
     const json = JSON.stringify({ swap: ctx.swap, ...data });
@@ -84,10 +57,10 @@ const middleware: OnionMiddleware<OB11Message> = async (data, ctx, next) => {
     const filePath = path.resolve(DB_DIR, logName);
     await fse.appendFile(filePath, `${json}\n`);
 
-    const extraLines = ctx.db.records;
+    const extraLines = ctx.records;
     if (extraLines.length > 0) {
       for (const lineData of extraLines) {
-        await visionImage(lineData);
+        await visionImage(lineData, ctx, 'db_record');
         logStdout(lineData);
         const json = JSON.stringify({ swap: ctx.swap, ...lineData });
         await fse.appendFile(filePath, `${json}\n`);
