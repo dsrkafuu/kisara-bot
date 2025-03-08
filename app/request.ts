@@ -83,14 +83,20 @@ export const visionImage = async (
         item.data.sub_type === 0 &&
         /^https?:\/\//i.test(item.data.url || '')
       ) {
-        logger.info('request', `${caller} vision:\n${item.data.url}`);
+        logger.info('request', `${caller} vision: ${item.data.url}`);
         try {
           const url = item.data.url!;
           // 下载图片转换为 base64
           const res = await fetch(url, {
             method: 'GET',
             headers: MOCK_HEADERS,
+          }).catch((err) => {
+            return JSON.stringify(err);
           });
+          if (typeof res === 'string') {
+            logger.info('request', `${caller} image expired: ${res}`);
+            return;
+          }
           const blob = await res.blob();
           const buffer = await blob.arrayBuffer();
           // 压缩和处理图片
