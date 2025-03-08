@@ -30,11 +30,8 @@ const logStdout = (data: OB11Message) => {
       content += textArr.join(' ');
     }
   }
-  let summary = content.replaceAll('\n', ' ').trim();
+  const summary = content.replaceAll('\n', ' ').trim();
   if (summary) {
-    if (summary.length > 50) {
-      summary = summary.substring(0, 50) + '...';
-    }
     const stdout = `(${data.sender.nickname}): ${summary}`;
     logger.info('db', stdout);
   }
