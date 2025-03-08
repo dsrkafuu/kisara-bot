@@ -20,6 +20,13 @@ def clean_files(out_folder: Path):
     print(f"Cleaned {clean_count} old files")
 
 
+def is_kana(text):
+    for char in text:
+        if "\u3040" <= char <= "\u309f" or "\u30a0" <= char <= "\u30ff":
+            return True
+    return False
+
+
 def main():
     try:
         file_path = sys.argv[1]
@@ -46,7 +53,8 @@ def main():
         words = []
         for split in splits:
             word = split.strip()
-            if len(word) > 0 and word not in f_stop_seg_list:
+            # 这里需要把单个日文假名排掉
+            if len(word) > 0 and word not in f_stop_seg_list and not is_kana(word):
                 words.append(word)
         if len(words) == 0:
             print("Not enough valid words")
