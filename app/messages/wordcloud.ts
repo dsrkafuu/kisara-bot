@@ -87,18 +87,21 @@ const middleware: OnionMiddleware<OB11Message> = async (data, ctx, next) => {
           wcname,
           userText.replaceAll('\n', '')
         );
-        if (!result) {
-          await ctx.send([getText('生成词云失败，请以后再试')], {
-            quoteSender: true,
-          });
-          ctx.swap.wordcloud = true;
-          return;
-        }
         await ctx.send([getText('你的昨日发言词云'), getImage(result)], {
           quoteSender: true,
         });
       } catch (e: any) {
-        logger.error('wordcloud', 'jieba error', e);
+        if (e === '0' || e === '1') {
+          await ctx.send([getText('生成词云失败，请以后再试')], {
+            quoteSender: true,
+          });
+        } else if (e === '2') {
+          await ctx.send([getText('你的有效聊天记录不足，请以后再试')], {
+            quoteSender: true,
+          });
+        } else {
+          logger.error('wordcloud', 'unexpected error:', e);
+        }
       }
     }
 

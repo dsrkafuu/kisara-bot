@@ -1,8 +1,12 @@
 import sys
+import io
 import time
 import jieba
 from pathlib import Path
 from wordcloud import WordCloud, STOPWORDS
+
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
+sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
 
 
 def clean_files(out_folder: Path):
@@ -20,7 +24,6 @@ def main():
     try:
         file_path = sys.argv[1]
         param = sys.argv[2]
-        print(id, param)
         file_dir = Path(__file__).resolve().parent
         userdict_path = file_dir / "userdict.txt"
         stopwords_path = file_dir / "stopwords.txt"
@@ -43,11 +46,11 @@ def main():
         words = []
         for split in splits:
             word = split.strip()
-            if len(word) >= 2 and word not in f_stop_seg_list:
+            if len(word) > 0 and word not in f_stop_seg_list:
                 words.append(word)
         if len(words) == 0:
-            raise Exception("not enough words")
-        print(words)
+            print("Not enough valid words")
+            sys.exit(2)
         # 前 100 个高频词汇
         wc = WordCloud(
             font_path=font_path,
@@ -59,10 +62,11 @@ def main():
         )
         wc.generate(" ".join(words))
         wc.to_file(out_file)
-        print("Wordcloud saved to", out_file)
+        sys.exit(0)
 
     except Exception as e:
         print(e)
+        sys.exit(1)
 
 
 main()

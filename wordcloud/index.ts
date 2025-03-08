@@ -18,20 +18,24 @@ const genWordcloud = (name: string, article: string) => {
     return Promise.resolve(filePath);
   }
 
-  return new Promise<string | null>((resolve, reject) => {
+  return new Promise<string>((resolve, reject) => {
     const prog = path.resolve(process.cwd(), './wordcloud/main.py');
     const python = path.resolve(process.cwd(), './venv/Scripts/python.exe');
     const wordcloud = spawn(python, [prog, filePath, article]);
+    logger.info('wordcloud', `generate:\n${filePath}\n${article}`);
 
     wordcloud.stdout.on('data', (data) => {
-      logger.info('wordcloud', iconv.decode(data, 'gbk').trim());
+      logger.info('wordcloud', iconv.decode(data, 'utf-8').trim());
     });
     wordcloud.stderr.on('data', (data) => {
-      logger.info('wordcloud', iconv.decode(data, 'gbk').trim());
+      logger.info('wordcloud', iconv.decode(data, 'utf-8').trim());
     });
     wordcloud.on('close', (code) => {
-      if (code === 0) resolve(filePath);
-      else reject(null);
+      if (code === 0 && fse.existsSync(filePath)) {
+        resolve(filePath);
+      } else {
+        reject(`${code}`);
+      }
     });
   });
 };
