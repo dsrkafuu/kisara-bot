@@ -7,11 +7,12 @@ import { RecordUsage } from './types';
 
 /** 获取某个时间点那一天的使用情况 */
 export const getRecordUsage = async (
-  timestamp: number
+  timestamp: number,
+  type: 'chat' | 'vision' = 'chat'
 ): Promise<RecordUsage | null> => {
   const filePath = path.resolve(
     DB_DIR,
-    `usage_${dayjs(timestamp).format('YYYYMMDD')}.json`
+    `usage${type === 'vision' ? '_vision' : ''}_${dayjs(timestamp).format('YYYYMMDD')}.json`
   );
   if (!fse.existsSync(filePath)) {
     return null;
@@ -29,7 +30,10 @@ export const getRecordUsage = async (
   }
 };
 
-export const recordUsage = async (usage?: any) => {
+export const recordUsage = async (
+  usage?: any,
+  type: 'chat' | 'vision' = 'chat'
+) => {
   if (usage && usage.total_tokens > 0) {
     const newRecord = {
       completion_tokens: usage.completion_tokens || 0,
@@ -40,9 +44,9 @@ export const recordUsage = async (usage?: any) => {
     const timestamp = Date.now();
     const filePath = path.resolve(
       DB_DIR,
-      `usage_${dayjs(timestamp).format('YYYYMMDD')}.json`
+      `usage${type === 'vision' ? '_vision' : ''}_${dayjs(timestamp).format('YYYYMMDD')}.json`
     );
-    const oldRecord = await getRecordUsage(timestamp);
+    const oldRecord = await getRecordUsage(timestamp, type);
     try {
       if (!oldRecord) {
         fse.writeJsonSync(filePath, { times: 1, ...newRecord });
