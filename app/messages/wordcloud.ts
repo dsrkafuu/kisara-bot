@@ -63,7 +63,18 @@ const middleware: OnionMiddleware<OB11Message> = async (data, ctx, next) => {
           }
           const simpleText = getSimpleText(dbLineObj);
           if (simpleText) {
-            userLines.push(simpleText);
+            // 过滤掉链接
+            const httpRegex =
+              /https?:\/\/[a-zA-Z0-9\-._~:/?#[\]@!$&'()*+,;=]+/g;
+            const wwwRegex =
+              /(https?:\/\/|www\.)[a-zA-Z0-9\-._~:/?#[\]@!$&'()*+,;=]+/g;
+            const cleanedText = simpleText
+              .replace(httpRegex, '')
+              .replace(wwwRegex, '')
+              .trim();
+            if (cleanedText) {
+              userLines.push(cleanedText);
+            }
           }
         }
       }
