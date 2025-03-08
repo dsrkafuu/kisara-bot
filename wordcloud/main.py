@@ -45,7 +45,8 @@ def main():
             userdict_list = f_user_text.splitlines()
         # 分词
         for word in userdict_list:
-            jieba.add_word(word)
+            if len(word.strip()) > 0:
+                jieba.add_word(word)
         splits = jieba.cut(param)
         with open(stopwords_path, encoding="utf-8") as f_stop:
             f_stop_text = f_stop.read()
