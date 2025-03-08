@@ -44,7 +44,7 @@ const middleware: OnionMiddleware<OB11Message> = async (data, ctx, next) => {
             );
             logger.info(
               'prompt',
-              `respond think:\n${think?.trim() || ''}\nrespond content:\n${content?.trim() || ''}`
+              `respond think:\n${think?.replaceAll('\n', ' ')?.trim() || ''}\nrespond content:\n${content?.trim() || ''}`
             );
             await ctx.send(
               [
@@ -93,7 +93,7 @@ const middleware: OnionMiddleware<OB11Message> = async (data, ctx, next) => {
             );
             logger.info(
               'prompt',
-              `respond think:\n${think?.trim() || ''}\nrespond content:\n${content?.trim() || ''}`
+              `respond think:\n${think?.replaceAll('\n', ' ')?.trim() || ''}\nrespond content:\n${content?.trim() || ''}`
             );
             await ctx.send(
               [
@@ -142,7 +142,7 @@ const middleware: OnionMiddleware<OB11Message> = async (data, ctx, next) => {
             );
             logger.info(
               'prompt',
-              `respond think:\n${think?.trim() || ''}\nrespond content:\n${content?.trim() || ''}`
+              `respond think:\n${think?.replaceAll('\n', ' ')?.trim() || ''}\nrespond content:\n${content?.trim() || ''}`
             );
             await ctx.send(
               [

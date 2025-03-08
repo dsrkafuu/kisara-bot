@@ -1,11 +1,11 @@
 import fse from 'fs-extra';
-import path from 'path';
-import wav from 'node-wav';
-import pinyin from 'pinyin';
 import * as math from 'mathjs';
 import { customAlphabet } from 'nanoid';
-import appConfig from '@config/app.json';
+import wav from 'node-wav';
+import path from 'path';
+import pinyin from 'pinyin';
 import { logger } from '@app/logger';
+import appConfig from '@config/app.json';
 import { cleanFiles } from './utils';
 
 const nanoid = customAlphabet('0123456789abcdefghijklmnopqrstuvwxyz', 10);

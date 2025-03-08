@@ -232,7 +232,7 @@ const middleware: OnionMiddleware<OB11Message> = async (data, ctx, next) => {
               .filter((line) => !!line);
             logger.info(
               'llm',
-              `respond think:\n${think?.trim() || ''}\nrespond content:\n${resArr.join('\n')}`
+              `respond think:\n${think?.replaceAll('\n', ' ')?.trim() || ''}\nrespond content:\n${resArr.join('\n')}`
             );
 
             // 如果超过两句，只取最后两句

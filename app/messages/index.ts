@@ -6,6 +6,7 @@ import db from './db';
 import help from './help';
 import hzys from './hzys';
 import wordcloud from './wordcloud';
+import repeat from './repeat';
 import prompt from './prompt';
 import llm from './llm';
 
@@ -36,6 +37,9 @@ const handler = async (data: OB11Message, ctx: BotContext) => {
 
   // LLM 网友
   onion.use(llm);
+
+  // 复读
+  onion.use(repeat);
 
   await onion.run(data, ctx);
 };

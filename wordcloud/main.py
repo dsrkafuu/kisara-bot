@@ -24,7 +24,7 @@ def main():
         file_dir = Path(__file__).resolve().parent
         userdict_path = file_dir / "userdict.txt"
         stopwords_path = file_dir / "stopwords.txt"
-        font_path = file_dir / "font.otf"
+        font_path = file_dir / "misans.otf"
         out_dir = file_dir / "out"
         if not out_dir.exists():
             out_dir.mkdir()
