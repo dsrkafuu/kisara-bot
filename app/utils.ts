@@ -85,6 +85,19 @@ export const getSimpleText = (
   return fullSimpleText;
 };
 
-export const clearifyText = (text?: string | null) => {
-  return text?.replace(/\n+/g, '\n').trim() || '';
+/**
+ * 清理消息文本为可输出格式
+ * @param text 消息文本
+ */
+export const clearifyText = (
+  text?: string | null,
+  options = {
+    allowLF: true,
+  }
+) => {
+  if (options.allowLF) {
+    return text?.replace(/\n+/g, '\n').trim() || '';
+  } else {
+    return text?.replace(/\n+/g, ' ').trim() || '';
+  }
 };

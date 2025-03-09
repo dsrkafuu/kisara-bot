@@ -115,7 +115,6 @@ export const visionImage = async (
           const base64Url = `data:image/jpeg;base64,${jpegImage}`;
           const { content } = await requestVision(base64Url);
           const realContent = content?.replaceAll('\n', ' ')?.trim() || '';
-          logger.info('request', `${caller} vision: ${realContent}`);
           if (realContent) {
             item.data.summary = `[图片：${realContent}]`;
             ctx.vision = true;

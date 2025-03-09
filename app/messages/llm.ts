@@ -10,18 +10,25 @@ import { getRateLimiter, getSimpleText } from '@app/utils';
 import llmConfig from '@config/llm.json';
 import { OB11Message } from '@napcat/onebot';
 
-/** 获取未回复的消息 ID 列表 */
+/** 已回复的消息列表，格式：{user_id}_{message_id} */
+let respondedSet = new Set<string>();
+let respondedInited = false;
+
+/** 从文件获取未回复的消息 ID 列表 */
 const getResponded = (): Set<string> => {
+  if (respondedInited) {
+    return respondedSet;
+  }
+  respondedInited = true;
   const filePath = path.resolve(DB_DIR, 'llm_responded.json');
-  if (!fse.existsSync(filePath)) {
-    return new Set<string>();
+  if (fse.existsSync(filePath)) {
+    try {
+      respondedSet = new Set<string>(fse.readJSONSync(filePath) || []);
+    } catch (e: any) {
+      logger.error('llm', 'init responded error:', e);
+    }
   }
-  try {
-    return new Set<string>(fse.readJSONSync(filePath) || []);
-  } catch (e: any) {
-    logger.error('llm', 'get responded error', e);
-    return new Set<string>();
-  }
+  return respondedSet;
 };
 
 /** 添加已回复的消息 */

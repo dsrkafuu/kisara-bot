@@ -15,7 +15,6 @@ const middleware: OnionMiddleware<OB11Message> = async (data, ctx, next) => {
     const fullSimpleText = getSimpleText(data);
     const qaSourceTextSplits = fullSimpleText.split('那我问你');
     const rpSourceTextSplits = fullSimpleText.split('锐评一下');
-    const trSourceTextSplits = fullSimpleText.split('帮我翻译');
 
     if (qaSourceTextSplits.length > 1) {
       // 单人 QQ 号限流，群组请求者 QQ 限流
@@ -56,7 +55,7 @@ const middleware: OnionMiddleware<OB11Message> = async (data, ctx, next) => {
             );
           }
         } catch (e: any) {
-          logger.error('prompt', 'qa error', e);
+          logger.error('prompt', 'qa error:', e);
           await ctx.send([getText('那我问你出现内部错误，请联系木更一号')]);
         }
 
@@ -105,61 +104,12 @@ const middleware: OnionMiddleware<OB11Message> = async (data, ctx, next) => {
             );
           }
         } catch (e: any) {
-          logger.error('prompt', 'rp error', e);
+          logger.error('prompt', 'rp error:', e);
           await ctx.send([getText('锐评一下出现内部错误，请联系木更一号')]);
         }
 
         // 不需要其他插件了
         ctx.swap.prompt_rp = true;
-        return;
-      }
-    }
-
-    if (trSourceTextSplits.length > 1) {
-      // 单人 QQ 号限流，群组请求者 QQ 限流
-      let limitKey = `prompt_tr_private_${user_id}`;
-      if (data.message_type === 'group') {
-        limitKey = `prompt_tr_group_${user_id}`;
-      }
-      const rateLimiter = getRateLimiter(limitKey, 10);
-
-      const inputText = trSourceTextSplits
-        .map((text) => text.trim())
-        .join(' ')
-        .trim();
-      if (inputText) {
-        try {
-          if (rateLimiter.check()) {
-            const systemPrompt = `${promptConfig.tr.join('；')}。`.trim();
-            const userPrompt = `翻译下面的内容：\n${inputText}`.trim();
-            logger.info(
-              'prompt',
-              `request system prompt:\n${systemPrompt}\nrequest user prompt:\n${userPrompt}`
-            );
-            const { content, think } = await requestLLM(
-              systemPrompt,
-              userPrompt
-            );
-            logger.info(
-              'prompt',
-              `respond think:\n${think?.replaceAll('\n', ' ')?.trim() || ''}\nrespond content:\n${content?.trim() || ''}`
-            );
-            await ctx.send(
-              [
-                getText(
-                  clearifyText(content) || '这个翻译不了，换个内容问我吧'
-                ),
-              ],
-              { quoteSender: true }
-            );
-          }
-        } catch (e: any) {
-          logger.error('prompt', 'tr error', e);
-          await ctx.send([getText('翻译出现内部错误，请联系木更一号')]);
-        }
-
-        // 不需要其他插件了
-        ctx.swap.prompt_tr = true;
         return;
       }
     }

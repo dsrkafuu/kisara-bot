@@ -16,7 +16,7 @@ const middleware: OnionMiddleware<OB11Message> = async (data, ctx, next) => {
   const lastDay = dayjs(time * 1000).subtract(1, 'day');
 
   // 有关键词词云，并且字数小于 10
-  if (sourceTextSplits.length > 1 && fullSimpleText.length < 10) {
+  if (sourceTextSplits.length > 1 && fullSimpleText.length < 5) {
     // 单人 QQ 号限流，群组请求者 QQ 限流
     let limitKey = `wordcloud_private_${data.user_id}`;
     if (data.message_type === 'group') {
