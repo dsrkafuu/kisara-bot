@@ -9,8 +9,8 @@ export interface SwapRecord {
   prompt_qa?: boolean;
   /** 锐评一下 */
   prompt_rp?: boolean;
-  /** 帮我翻译 */
-  prompt_tr?: boolean;
+  /** 描述图片 */
+  prompt_tp?: boolean;
   /** 活字印刷 */
   hzys?: boolean;
   /** 词云 */

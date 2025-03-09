@@ -1,7 +1,7 @@
 import { OnionMiddleware } from '@app/types';
 import { clearifyText, getRateLimiter, getSimpleText } from '@app/utils';
 import { logger } from '@app/logger';
-import { requestLLM } from '@app/request';
+import { requestLLM, visionImage } from '@app/request';
 import { getText } from '@app/respond';
 import promptConfig from '@config/prompt.json';
 import { OB11Message } from '@napcat/onebot';
@@ -15,6 +15,7 @@ const middleware: OnionMiddleware<OB11Message> = async (data, ctx, next) => {
     const fullSimpleText = getSimpleText(data);
     const qaSourceTextSplits = fullSimpleText.split('那我问你');
     const rpSourceTextSplits = fullSimpleText.split('锐评一下');
+    const tpSourceTextSplits = fullSimpleText.split('描述图片');
 
     if (qaSourceTextSplits.length > 1) {
       // 单人 QQ 号限流，群组请求者 QQ 限流
@@ -112,6 +113,35 @@ const middleware: OnionMiddleware<OB11Message> = async (data, ctx, next) => {
         ctx.swap.prompt_rp = true;
         return;
       }
+    }
+
+    if (tpSourceTextSplits.length > 1) {
+      // 单人 QQ 号限流，群组请求者 QQ 限流
+      let limitKey = `prompt_qa_private_${user_id}`;
+      if (data.message_type === 'group') {
+        limitKey = `prompt_qa_group_${user_id}`;
+      }
+      const rateLimiter = getRateLimiter(limitKey, 10);
+
+      try {
+        if (rateLimiter.check()) {
+          const visionRes = await visionImage(data, ctx, 'prompt', false);
+          if (visionRes.length) {
+            await ctx.send([getText(visionRes.join('\n'))], {
+              quoteSender: true,
+            });
+          } else {
+            await ctx.send([getText('我看不懂这张图片哦，换个图片试试吧')]);
+          }
+        }
+      } catch (e: any) {
+        logger.error('prompt', 'tp error:', e);
+        await ctx.send([getText('描述图片出现内部错误，请联系木更一号')]);
+      }
+
+      // 不需要其他插件了
+      ctx.swap.prompt_tp = true;
+      return;
     }
   }
 

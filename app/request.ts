@@ -51,19 +51,40 @@ export const requestLLM = async (
   return res;
 };
 
-const requestVision = async (url: string): Promise<LLMResult> => {
+const requestVision = async (
+  url: string | string[],
+  simple = true
+): Promise<LLMResult> => {
+  let prompt = '描述这张图片的内容，要求100字以内。';
+  if (Array.isArray(url)) {
+    prompt = '描述这张动态图片的内容，要求100字以内。';
+  }
+  if (simple) {
+    prompt = '一句话总结这张图片，要求50字以内。';
+    if (Array.isArray(url)) {
+      prompt = '一句话总结这张动态图片，要求50字以内。';
+    }
+  }
+  const frameContents: any[] = [];
+  if (Array.isArray(url)) {
+    for (const u of url) {
+      frameContents.push({
+        type: 'image_url',
+        image_url: { url: u, detail: simple ? 'low' : 'high' },
+      });
+    }
+  } else {
+    frameContents.push({
+      type: 'image_url',
+      image_url: { url, detail: simple ? 'low' : 'high' },
+    });
+  }
   const completion = await openai.chat.completions.create({
     model: llmConfig.vision,
     messages: [
       {
         role: 'user',
-        content: [
-          { type: 'text', text: '一句话总结图片内容，要求50字以内。' },
-          {
-            type: 'image_url',
-            image_url: { url, detail: 'low' },
-          },
-        ],
+        content: [{ type: 'text', text: prompt }, ...frameContents],
       },
     ],
   });
@@ -73,31 +94,36 @@ const requestVision = async (url: string): Promise<LLMResult> => {
 };
 
 /**
- * 图像识别，识别成功后会修改这条消息的 summary
+ * 图像识别，识别成功后会修改这条消息的 summary，返回识别结果
  * @param data 消息体
  * @param ctx Bot 上下文
  * @param caller 调用者信息
+ * @param simple 默认开启概括模式，用于聊天记录分析
  */
 export const visionImage = async (
   data: OB11Message,
   ctx: BotContext,
-  caller: string
+  caller: string,
+  simple = true
 ) => {
-  // 已经识别过的不再处理
-  if (ctx.vision) {
+  // 概括模式，已经识别过的不再处理
+  if (simple && ctx.vision) {
     logger.info('request', `${caller} already visioned`);
-    return;
+    return [];
   }
 
+  const retTexts: string[] = [];
   const { message } = data;
   if (typeof message !== 'string') {
     for (const item of message) {
-      // 表情不做识别
-      if (
+      let needVision =
         item.type === OB11MessageDataType.image &&
-        item.data.sub_type === 0 &&
-        /^https?:\/\//i.test(item.data.url || '')
-      ) {
+        /^https?:\/\//i.test(item.data.url || '');
+      // 概括模式，表情不做识别
+      if (simple) {
+        needVision = needVision && item.data.sub_type === 0;
+      }
+      if (needVision) {
         logger.info('request', `${caller} vision: ${item.data.url}`);
         try {
           const url = item.data.url!;
@@ -110,19 +136,23 @@ export const visionImage = async (
           });
           if (typeof res === 'string') {
             logger.info('request', `${caller} image expired: ${res}`);
-            return;
+            return [];
           }
           // 复制一份 res 用 base64 检查缓存
           const base64Res = await res.clone().blob();
           const base64Buffer = await base64Res.arrayBuffer();
           const base64Image = Buffer.from(base64Buffer).toString('base64');
-          const cacheKey = `${base64Image}`;
+          const cacheKey = `${simple ? 'simple' : 'complex'}_${base64Image}`;
           const cachedRes = cache.get(cacheKey);
           if (cachedRes) {
-            logger.info('cache', 'lru cache hit for vision');
+            logger.info(
+              'cache',
+              `${simple ? 'simple' : 'complex'} lru cache hit`
+            );
             const { content } = cachedRes;
             const realContent = clearifyText(content, { allowLF: false });
             if (realContent) {
+              retTexts.push(realContent);
               item.data.summary = `[图片：${realContent}]`;
               ctx.vision = true;
               continue;
@@ -132,22 +162,60 @@ export const visionImage = async (
           const blob = await res.blob();
           const buffer = await blob.arrayBuffer();
           const image = sharp(buffer);
-          const { width, height } = await image.metadata();
-          // 如果有大于 1000px 的图片，按比例缩小
-          if (width && height && (width > 1000 || height > 1000)) {
+          const { width, height, format, pages = 1 } = await image.metadata();
+          // 概括模式，如果有大于 1000px 的图片，按比例缩小
+          if (simple && width && height && (width > 1000 || height > 1000)) {
             const ratio = Math.min(1000 / width, 1000 / height);
             const newWidth = Math.floor(width * ratio);
             const newHeight = Math.floor(height * ratio);
             image.resize(newWidth, newHeight, { kernel: 'lanczos3' });
           }
-          // 转换为 jpeg 用 base64 输出
-          const jpegBuffer = await image.jpeg().toBuffer();
-          const jpegImage = jpegBuffer.toString('base64');
-          const base64Url = `data:image/jpeg;base64,${jpegImage}`;
-          const { content } = await requestVision(base64Url);
+          // 如果不是 gif，转换为 jpeg 用 base64 输出
+          let content: string = '';
+          if (format !== 'gif') {
+            const jpegBuffer = await image.jpeg().toBuffer();
+            const jpegImage = jpegBuffer.toString('base64');
+            const base64Url = `data:image/jpeg;base64,${jpegImage}`;
+            const res = await requestVision(base64Url, simple);
+            content = res.content || '';
+          }
+          // gif 的话，平均抽出 5 帧
+          else {
+            const numFramesToExtract = 5;
+            let frameIndices: number[] = [];
+            // 生成均匀分布的帧索引
+            if (pages <= numFramesToExtract) {
+              // 如果总帧数不足5帧，则全部抽取
+              frameIndices = Array.from({ length: pages }, (_, i) => i);
+            } else {
+              // 计算均匀分布的索引（例如总帧10→索引0,2,4,6,9）
+              frameIndices = Array.from(
+                { length: numFramesToExtract },
+                (_, i) => {
+                  return Math.floor(
+                    (i * (pages - 1)) / (numFramesToExtract - 1)
+                  );
+                }
+              );
+            }
+            // 并行处理所有帧的转换
+            const base64Promises = frameIndices.map((index) =>
+              sharp(buffer, { page: index })
+                .jpeg()
+                .toBuffer()
+                .then((buffer) => buffer.toString('base64'))
+            );
+            const base64Frames = await Promise.all(base64Promises);
+            const imageFrames = base64Frames.map(
+              (base64Frame) => `data:image/jpeg;base64,${base64Frame}`
+            );
+            const res = await requestVision(imageFrames, simple);
+            content = res.content || '';
+          }
           cache.set(cacheKey, { content });
           const realContent = clearifyText(content, { allowLF: false });
           if (realContent) {
+            retTexts.push(realContent);
             item.data.summary = `[图片：${realContent}]`;
             ctx.vision = true;
           }
@@ -157,4 +225,6 @@ export const visionImage = async (
       }
     }
   }
+
+  return retTexts;
 };
