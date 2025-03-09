@@ -242,7 +242,13 @@ const middleware: OnionMiddleware<OB11Message> = async (data, ctx, next) => {
           if (content) {
             let resArr = content
               .split('\n')
-              .map((line) => line.trim())
+              .map((line) => {
+                const trimmedLine = line.trim();
+                if (/^["“”].+["“”]$/i.test(trimmedLine)) {
+                  return trimmedLine.slice(1, -1);
+                }
+                return trimmedLine;
+              })
               .filter((line) => !!line);
             logger.info(
               'llm',
