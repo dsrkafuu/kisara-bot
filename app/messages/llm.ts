@@ -140,18 +140,18 @@ const middleware: OnionMiddleware<OB11Message> = async (data, ctx, next) => {
         }
 
         // 记录最多 20 条
-        if (recordLines.length >= 20) {
+        if (recordLines.length >= llmConfig.contextLength) {
           break;
         }
       }
 
       // 记录至少 5 条
-      // 单人 QQ 号限流 10 秒，群组群号限流 120 秒，at 机器人限制 10 秒
+      // 单人 QQ 号限流 10 秒，群组群号限流 300 秒，at 机器人限制 10 秒
       let limitTime = 10;
       let limitKey = `llm_auto_private_${user_id}`;
       if (message_type === 'group') {
         limitKey = `llm_auto_group_${group_id}`;
-        limitTime = 120;
+        limitTime = 300;
       }
       if (isAtBot) {
         limitKey = `llm_at_group_${group_id}`;
