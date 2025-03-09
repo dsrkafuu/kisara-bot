@@ -6,21 +6,34 @@ import { MOCK_HEADERS } from './constants';
 import { recordUsage } from './usage';
 import { logger } from './logger';
 import { BotContext } from './types';
-
-const openai = new OpenAI({
-  baseURL: llmConfig.baseURL,
-  apiKey: llmConfig.apiKey,
-});
+import { LRUCache } from 'lru-cache';
+import { clearifyText } from './utils';
 
 interface LLMResult {
   content?: string | null;
   think?: string | null;
 }
 
+const openai = new OpenAI({
+  baseURL: llmConfig.baseURL,
+  apiKey: llmConfig.apiKey,
+});
+
+const cache = new LRUCache<string, LLMResult>({
+  max: 1000, // 缓存最大数量
+  ttl: 1000 * 3600 * 24, // 缓存过期时间 24 小时
+});
+
 export const requestLLM = async (
   system: string,
   prompt: string
 ): Promise<LLMResult> => {
+  const cacheKey = `${system}_${prompt}`;
+  const cachedRes = cache.get(cacheKey);
+  if (cachedRes) {
+    logger.info('cache', 'lru cache hit for llm');
+    return cachedRes;
+  }
   const completion = await openai.chat.completions.create({
     model: llmConfig.model,
     messages: [
@@ -30,10 +43,12 @@ export const requestLLM = async (
   });
   const message: any = completion.choices[0]?.message;
   await recordUsage(completion.usage);
-  return {
+  const res = {
     content: message?.content,
     think: message?.reasoning_content,
   };
+  cache.set(cacheKey, res);
+  return res;
 };
 
 const requestVision = async (url: string): Promise<LLMResult> => {
@@ -97,9 +112,25 @@ export const visionImage = async (
             logger.info('request', `${caller} image expired: ${res}`);
             return;
           }
+          // 复制一份 res 用 base64 检查缓存
+          const base64Res = await res.clone().blob();
+          const base64Buffer = await base64Res.arrayBuffer();
+          const base64Image = Buffer.from(base64Buffer).toString('base64');
+          const cacheKey = `${base64Image}`;
+          const cachedRes = cache.get(cacheKey);
+          if (cachedRes) {
+            logger.info('cache', 'lru cache hit for vision');
+            const { content } = cachedRes;
+            const realContent = clearifyText(content, { allowLF: false });
+            if (realContent) {
+              item.data.summary = `[图片：${realContent}]`;
+              ctx.vision = true;
+              continue;
+            }
+          }
+          // 压缩和处理图片
           const blob = await res.blob();
           const buffer = await blob.arrayBuffer();
-          // 压缩和处理图片
           const image = sharp(buffer);
           const { width, height } = await image.metadata();
           // 如果有大于 1000px 的图片，按比例缩小
@@ -114,7 +145,8 @@ export const visionImage = async (
           const jpegImage = jpegBuffer.toString('base64');
           const base64Url = `data:image/jpeg;base64,${jpegImage}`;
           const { content } = await requestVision(base64Url);
-          const realContent = content?.replaceAll('\n', ' ')?.trim() || '';
+          cache.set(cacheKey, { content });
+          const realContent = clearifyText(content, { allowLF: false });
           if (realContent) {
             item.data.summary = `[图片：${realContent}]`;
             ctx.vision = true;
