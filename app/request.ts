@@ -138,11 +138,8 @@ export const visionImage = async (
             logger.info('request', `${caller} image expired: ${res}`);
             return [];
           }
-          // 复制一份 res 用 base64 检查缓存
-          const base64Res = await res.clone().blob();
-          const base64Buffer = await base64Res.arrayBuffer();
-          const base64Image = Buffer.from(base64Buffer).toString('base64');
-          const cacheKey = `${simple ? 'simple' : 'complex'}_${base64Image}`;
+          // 复制一份 res 用 url 检查缓存
+          const cacheKey = `${simple ? 'simple' : 'complex'}_${url}`;
           const cachedRes = cache.get(cacheKey);
           if (cachedRes) {
             logger.info(
