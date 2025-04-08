@@ -161,27 +161,30 @@ const middleware: OnionMiddleware<OB11Message> = async (data, ctx, next) => {
 
       if (rateLimiter.check()) {
         // 请求 LLM
-        const systemLines = [];
+        const systemLines: string[] = [];
         const { Name, Language, Profile, Skills, Background, Rules } =
           llmConfig.role;
         if (Profile) {
           systemLines.push(
-            `('Profile', ['你是${Name}', ${Profile.map((item) => `'${item}'`).join(', ')}])`
+            JSON.stringify({
+              Profile: [`你是${Name}`, ...Profile],
+            })
           );
         }
         if (Skills) {
-          systemLines.push(
-            `('Skills', [${Skills.map((item) => `'${item}'`).join(', ')}])`
-          );
+          systemLines.push(JSON.stringify({ Skills }));
         }
         if (Background) {
-          systemLines.push(
-            `('Background', [${Background.map((item) => `'${item}'`).join(', ')}])`
-          );
+          systemLines.push(JSON.stringify({ Background }));
         }
         if (Rules) {
           systemLines.push(
-            `('Rules', [${Rules.map((item) => `'你必须遵守${item}'`).join(', ')}, '你必须用${Language}与我交谈'])`
+            JSON.stringify({
+              Rules: [
+                ...Rules.map((item) => `你必须遵守${item}`),
+                `你必须用${Language}与我交谈`,
+              ],
+            })
           );
         }
 
