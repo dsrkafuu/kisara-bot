@@ -60,12 +60,12 @@ const getMessageLog = (dbLineObj: OB11Message, botQQId?: number) => {
     allowImage: true,
   });
   if (simpleText) {
-    const timeStr = dayjs(dbLineObj.time * 1000).format('M月D日H时m分');
+    const timeStr = dayjs(dbLineObj.time * 1000).format('MM/DD HH:mm');
     let senderStr = dbLineObj.sender.nickname;
     if (`${dbLineObj.sender.user_id}` === `${botQQId}`) {
       senderStr = '你';
     }
-    const messageLog = `[${timeStr}]“${senderStr}”说：“${simpleText.replaceAll(`@${botQQId}`, '@你')}”`;
+    const messageLog = `{[${timeStr}]“${senderStr}”说：“${simpleText.replaceAll(`@${botQQId}`, '@你')}”}`;
     return {
       messageLog,
       messageId: `${dbLineObj.user_id}_${dbLineObj.message_id}`,
@@ -207,10 +207,12 @@ const middleware: OnionMiddleware<OB11Message> = async (data, ctx, next) => {
         // 至少有 5 条未回复的消息记录，除非是直接 at 机器人
         if (notRespondedLines.length > llmConfig.minUnresponded || isAtBot) {
           // 已经回复过的消息记录
-          let userPrompt = `这是之前的群聊消息记录：${alreadyRespondedLines.join('。')}。`;
+          let userPrompt = alreadyRespondedLines.length
+            ? `这是之前的群聊消息记录：${alreadyRespondedLines.join('')}。`
+            : '';
           // 未回复的消息记录
           if (notRespondedLines.length > 0) {
-            userPrompt += `这是你未回复的消息记录：${notRespondedLines.map((line) => line.messageLog).join('。')}。`;
+            userPrompt += `这是你未回复的消息记录：${notRespondedLines.map((line) => line.messageLog).join('')}。`;
             // 如果是自动触发，在未回复里面加上当前这条
             if (!isAtBot && thisMessageEntry) {
               userPrompt += `${thisMessageEntry.messageLog}。`;
@@ -218,9 +220,9 @@ const middleware: OnionMiddleware<OB11Message> = async (data, ctx, next) => {
           }
           // 如果是 at 机器人，前面的未回复的消息记录也就没有当前这条，让他重点回复当前这条
           if (isAtBot && thisMessageEntry) {
-            userPrompt += `这是这次群友指定要你回复的记录：${thisMessageEntry.messageLog}。`;
+            userPrompt += `这是本次群友指定要你回复的消息：${thisMessageEntry.messageLog}`;
           }
-          userPrompt += `消息记录格式为“群友昵称/你”说：“”，记录中图片内容格式为[图片：内容解释]。`;
+          userPrompt += `消息记录格式为{[时间]“群友昵称/你”说：“”}，内容中的图片格式为[图片：图片内容解释]。`;
           userPrompt += `你要作为${Name}对未回复的群聊消息记录做出符合${Name}角色设定的回复。`;
           userPrompt += `确保回复充分体现${Name}的性格特征和情感反应。`;
           userPrompt += `不要称呼群友昵称，使用你或你们代指群友。`;
