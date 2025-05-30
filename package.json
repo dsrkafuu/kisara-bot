@@ -4,6 +4,7 @@
   },
   "type": "module",
   "name": "kisara-bot",
+  "version": "1.0.0",
   "module": "./app/index.ts",
   "scripts": {
     "start": "cross-env NODE_ENV=production bun ./app/index.ts",
@@ -16,22 +17,22 @@
     "fs-extra": "^11.3.0",
     "iconv-lite": "^0.6.3",
     "lru-cache": "^11.1.0",
-    "mathjs": "^14.4.0",
+    "mathjs": "^14.5.1",
     "nanoid": "^5.1.5",
     "node-wav": "^0.0.2",
-    "openai": "^4.97.0",
-    "pinyin": "^4.0.0-alpha.2",
-    "sharp": "^0.34.1",
+    "openai": "^5.0.1",
+    "pinyin": "^4.0.0",
+    "sharp": "^0.34.2",
     "ws": "^8.18.2"
   },
   "devDependencies": {
-    "@dsrca/config": "^4.5.0",
-    "@types/bun": "^1.2.12",
+    "@dsrca/config": "^5.0.1",
+    "@types/bun": "^1.2.15",
     "@types/fs-extra": "^11.0.4",
     "@types/node-wav": "^0.0.4",
     "@types/pinyin": "^2.10.2",
     "cross-env": "^7.0.3",
-    "eslint": "^9.26.0",
+    "eslint": "^9.27.0",
     "prettier": "^3.5.3",
     "typescript": "^5.8.3"
   }
