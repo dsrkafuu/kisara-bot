@@ -62,13 +62,13 @@ wss.on('connection', (ws) => {
             if (GROUP_WHITELIST.includes(`${data.group_id}`)) {
               handleMessageEvent(data, ctx);
             } else {
-              logger.info('main', 'group message filtered', data.group_id);
+              // logger.info('main', 'group message filtered', data.group_id);
             }
           } else if (data.message_type === 'private') {
             if (PRIVATE_WHITELIST.includes(`${data.user_id}`)) {
               handleMessageEvent(data, ctx);
             } else {
-              logger.info('main', 'private message filtered', data.user_id);
+              // logger.info('main', 'private message filtered', data.user_id);
             }
           }
         }
