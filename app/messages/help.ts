@@ -30,6 +30,11 @@ const middleware: OnionMiddleware<OB11Message> = async (data, ctx, next) => {
       }
       helpText += `\n${processData}`;
 
+      helpText += `\n\n当前版本模型列表：`;
+      helpConfig.versions.forEach((versionName) => {
+        helpText += `\n${versionName}`;
+      });
+
       helpText += '\n\n以下为固定指令模式示例：';
       helpConfig.features.forEach((feature) => {
         helpText += `\n${feature}`;
