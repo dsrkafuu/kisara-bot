@@ -80,6 +80,12 @@ const middleware: OnionMiddleware<OB11Message> = async (data, ctx, next) => {
   const isAtBot = ctx.parsed.at_bot;
   const dayTime = dayjs(time * 1000);
 
+  // 关闭 LLM
+  if (llmConfig.enable === false) {
+    await next();
+    return;
+  }
+
   // 触发概率
   const randTrigger = Math.random() < llmConfig.triggerProb;
 

@@ -16,6 +16,19 @@ const middleware: OnionMiddleware<OB11Message> = async (data, ctx, next) => {
     const qaSourceTextSplits = fullSimpleText.split('那我问你');
     const rpSourceTextSplits = fullSimpleText.split('锐评一下');
     const tpSourceTextSplits = fullSimpleText.split('描述图片');
+    const totalMatchLength =
+      qaSourceTextSplits.length +
+      rpSourceTextSplits.length +
+      tpSourceTextSplits.length;
+
+    // 关闭问答
+    if (promptConfig.enable === false) {
+      if (totalMatchLength > 1) {
+        await ctx.send([getText('没钱了，LLM 已暂时关闭')]);
+      }
+      await next();
+      return;
+    }
 
     if (qaSourceTextSplits.length > 1) {
       // 单人 QQ 号限流，群组请求者 QQ 限流

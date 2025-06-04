@@ -80,7 +80,7 @@ const requestVision = async (
     });
   }
   const completion = await openai.chat.completions.create({
-    model: llmConfig.vision,
+    model: llmConfig.visionModel,
     messages: [
       {
         role: 'user',
@@ -109,6 +109,11 @@ export const visionImage = async (
   // 概括模式，已经识别过的不再处理
   if (simple && ctx.vision) {
     logger.info('request', `${caller} already visioned`);
+    return [];
+  }
+
+  if (llmConfig.vision === false) {
+    logger.info('request', `${caller} vision disabled`);
     return [];
   }
 
