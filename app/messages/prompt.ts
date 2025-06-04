@@ -16,14 +16,14 @@ const middleware: OnionMiddleware<OB11Message> = async (data, ctx, next) => {
     const qaSourceTextSplits = fullSimpleText.split('那我问你');
     const rpSourceTextSplits = fullSimpleText.split('锐评一下');
     const tpSourceTextSplits = fullSimpleText.split('描述图片');
-    const totalMatchLength =
-      qaSourceTextSplits.length +
-      rpSourceTextSplits.length +
-      tpSourceTextSplits.length;
+    const hasPrompt =
+      qaSourceTextSplits.length > 1 ||
+      rpSourceTextSplits.length > 1 ||
+      tpSourceTextSplits.length > 1;
 
     // 关闭问答
     if (promptConfig.enable === false) {
-      if (totalMatchLength > 1) {
+      if (hasPrompt) {
         await ctx.send([getText('没钱了，LLM 已暂时关闭')]);
       }
       await next();
